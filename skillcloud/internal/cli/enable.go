@@ -209,7 +209,7 @@ func disableProjectSkills(root string, globalConfig config.Config, projectConfig
 				if err := install.CanRemoveProjection(dest, expected); err != nil {
 					return project.Config{}, removed, err
 				}
-				if err := os.RemoveAll(dest); err != nil {
+				if err := install.RemoveProjection(dest); err != nil {
 					return project.Config{}, removed, err
 				}
 				removed++

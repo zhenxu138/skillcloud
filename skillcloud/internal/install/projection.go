@@ -17,17 +17,26 @@ type ProjectionManifest struct {
 	SourceCommit string `json:"source_commit,omitempty"`
 }
 
+func projectionManifestPath(dir string) string {
+	info, err := os.Lstat(dir)
+	if err == nil && info.Mode()&os.ModeSymlink != 0 {
+		base := filepath.Base(dir)
+		return filepath.Join(filepath.Dir(dir), "."+base+ProjectionManifestFile)
+	}
+	return filepath.Join(dir, ProjectionManifestFile)
+}
+
 func WriteProjectionManifest(dir string, manifest ProjectionManifest) error {
 	data, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return err
 	}
 	data = append(data, '\n')
-	return os.WriteFile(filepath.Join(dir, ProjectionManifestFile), data, 0o644)
+	return os.WriteFile(projectionManifestPath(dir), data, 0o644)
 }
 
 func ReadProjectionManifest(dir string) (ProjectionManifest, error) {
-	data, err := os.ReadFile(filepath.Join(dir, ProjectionManifestFile))
+	data, err := os.ReadFile(projectionManifestPath(dir))
 	if err != nil {
 		return ProjectionManifest{}, err
 	}
@@ -47,4 +56,9 @@ func CanRemoveProjection(dir string, expected ProjectionManifest) error {
 		return fmt.Errorf("%s projection manifest mismatch", dir)
 	}
 	return nil
+}
+
+func RemoveProjection(dir string) error {
+	_ = os.Remove(projectionManifestPath(dir))
+	return os.RemoveAll(dir)
 }

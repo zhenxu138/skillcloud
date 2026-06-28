@@ -104,3 +104,55 @@ func TestExecuteLinkFallbackCopiesAndRecordsCopyMode(t *testing.T) {
 	}
 }
 
+func TestExecuteLinkWritesProjectionManifestOutsideSource(t *testing.T) {
+	root := t.TempDir()
+	src := filepath.Join(root, "src")
+	dst := filepath.Join(root, "dst", "code-review")
+	if err := os.MkdirAll(src, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "SKILL.md"), []byte("link me"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify symlinks are supported in this test environment.
+	probeSrc := filepath.Join(root, "probe-src")
+	probeDst := filepath.Join(root, "probe-dst")
+	if err := os.MkdirAll(probeSrc, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(probeSrc, probeDst); err != nil {
+		t.Skipf("symlinks not supported in test environment: %v", err)
+	}
+	_ = os.Remove(probeDst)
+
+	manifest := ProjectionManifest{SourceID: "coding/code-review", Target: "codex", Scope: "project", Mode: "link"}
+	if err := Execute([]Action{{Mode: "link", Source: src, Dest: dst, Projection: &manifest}}); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	info, err := os.Lstat(dst)
+	if err != nil {
+		t.Fatalf("Lstat(%q) error = %v", dst, err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("expected %q to be a symlink", dst)
+	}
+
+	sidecar := filepath.Join(filepath.Dir(dst), ".code-review"+ProjectionManifestFile)
+	if _, err := os.Stat(sidecar); err != nil {
+		t.Fatalf("expected sidecar manifest in projection directory: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(src, ProjectionManifestFile)); !os.IsNotExist(err) {
+		t.Fatalf("manifest should not be written into library source tree")
+	}
+
+	got, err := ReadProjectionManifest(dst)
+	if err != nil {
+		t.Fatalf("ReadProjectionManifest() error = %v", err)
+	}
+	if got.Mode != "link" {
+		t.Fatalf("manifest mode = %q, want %q", got.Mode, "link")
+	}
+}
+
