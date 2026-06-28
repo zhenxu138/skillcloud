@@ -10,6 +10,43 @@ import (
 	"github.com/skillcloud/skillcloud/internal/project"
 )
 
+func TestUseCommandCopiesSkillAndWritesProjectConfig(t *testing.T) {
+	home := t.TempDir()
+	repoDir := t.TempDir()
+	projectRoot := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	writeTestSkill(t, repoDir, filepath.Join("skills", "coding", "code-review"), "code-review", "Review code.")
+	cfg := config.DefaultConfig("local")
+	cfg.RepoDir = repoDir
+	configPath, err := config.DefaultConfigPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := config.Save(configPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	oldWD, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(oldWD)
+	if err := os.Chdir(projectRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := NewRootCommand()
+	cmd.SetArgs([]string{"use", "coding/code-review", "--target", "codex", "--scope", "project", "--mode", "copy"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(projectRoot, ".agents", "skills", "code-review", "SKILL.md")); err != nil {
+		t.Fatalf("expected projected skill: %v", err)
+	}
+}
+
 func TestDefaultAlias(t *testing.T) {
 	tests := map[string]string{
 		"coding/code-review": "code-review",

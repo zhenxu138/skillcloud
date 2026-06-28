@@ -10,6 +10,8 @@ func NewRootCommand() *cobra.Command {
 
 	cmd.AddCommand(newInitCommand())
 	cmd.AddCommand(newPullCommand())
+	cmd.AddCommand(newConnectCommand())
+	cmd.AddCommand(newUpdateCommand())
 	cmd.AddCommand(newPushCommand())
 	cmd.AddCommand(newStatusCommand())
 	cmd.AddCommand(newListCommand())
@@ -17,7 +19,9 @@ func NewRootCommand() *cobra.Command {
 	cmd.AddCommand(newBrowseCommand())
 	cmd.AddCommand(newAddCommand())
 	cmd.AddCommand(newEnableCommand())
+	cmd.AddCommand(newUseCommand())
 	cmd.AddCommand(newDisableCommand())
+	cmd.AddCommand(newUnuseCommand())
 	cmd.AddCommand(newApplyCommand())
 	cmd.AddCommand(newDoctorCommand())
 	cmd.AddCommand(newValidateCommand())
