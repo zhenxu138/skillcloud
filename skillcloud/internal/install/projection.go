@@ -59,6 +59,12 @@ func CanRemoveProjection(dir string, expected ProjectionManifest) error {
 }
 
 func RemoveProjection(dir string) error {
-	_ = os.Remove(projectionManifestPath(dir))
-	return os.RemoveAll(dir)
+	manifestPath := projectionManifestPath(dir)
+	if err := os.RemoveAll(dir); err != nil {
+		return err
+	}
+	if err := os.Remove(manifestPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }

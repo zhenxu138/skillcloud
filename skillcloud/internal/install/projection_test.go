@@ -3,6 +3,7 @@ package install
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -45,5 +46,91 @@ func TestCanRemoveProjectionAcceptsMatchingManifest(t *testing.T) {
 	}
 	if err := CanRemoveProjection(dir, expected); err != nil {
 		t.Fatalf("CanRemoveProjection() error = %v", err)
+	}
+}
+
+func TestRemoveProjectionRemovesDirectoryAndManifest(t *testing.T) {
+	dir := t.TempDir()
+	projDir := filepath.Join(dir, "proj")
+	if err := os.Mkdir(projDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	manifest := ProjectionManifest{SourceID: "coding/code-review", Target: "codex", Scope: "project", Mode: "copy"}
+	if err := WriteProjectionManifest(projDir, manifest); err != nil {
+		t.Fatal(err)
+	}
+	if err := RemoveProjection(projDir); err != nil {
+		t.Fatalf("RemoveProjection() error = %v", err)
+	}
+	if _, err := os.Stat(projDir); !os.IsNotExist(err) {
+		t.Fatalf("expected projection dir to be removed, got err = %v", err)
+	}
+	if _, err := os.Stat(projectionManifestPath(projDir)); !os.IsNotExist(err) {
+		t.Fatalf("expected manifest to be removed, got err = %v", err)
+	}
+}
+
+func TestRemoveProjectionRemovesSymlinkAndSidecar(t *testing.T) {
+	dir := t.TempDir()
+	targetDir := filepath.Join(dir, "target")
+	if err := os.Mkdir(targetDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	linkDir := filepath.Join(dir, "link")
+	if err := os.Symlink(targetDir, linkDir); err != nil {
+		t.Skip("skipping symlink test: ", err)
+	}
+	manifest := ProjectionManifest{SourceID: "coding/code-review", Target: "codex", Scope: "project", Mode: "copy"}
+	if err := WriteProjectionManifest(linkDir, manifest); err != nil {
+		t.Fatal(err)
+	}
+	sidecarPath := projectionManifestPath(linkDir)
+	if _, err := os.Stat(sidecarPath); err != nil {
+		t.Fatalf("sidecar manifest not created: %v", err)
+	}
+	if err := RemoveProjection(linkDir); err != nil {
+		t.Fatalf("RemoveProjection() error = %v", err)
+	}
+	if _, err := os.Lstat(linkDir); !os.IsNotExist(err) {
+		t.Fatalf("expected symlink to be removed, got err = %v", err)
+	}
+	if _, err := os.Stat(sidecarPath); !os.IsNotExist(err) {
+		t.Fatalf("expected sidecar manifest to be removed, got err = %v", err)
+	}
+	if _, err := os.Stat(targetDir); err != nil {
+		t.Fatalf("expected symlink target to remain, got err = %v", err)
+	}
+}
+
+func TestRemoveProjectionKeepsManifestIfRemoveAllFails(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("chmod-based removal failure not reliable on Windows")
+	}
+	dir := t.TempDir()
+	projDir := filepath.Join(dir, "proj")
+	if err := os.Mkdir(projDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	nested := filepath.Join(projDir, "nested")
+	if err := os.Mkdir(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nested, "file.txt"), []byte("data"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifest := ProjectionManifest{SourceID: "coding/code-review", Target: "codex", Scope: "project", Mode: "copy"}
+	if err := WriteProjectionManifest(projDir, manifest); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(projDir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(projDir, 0o755) })
+
+	if err := RemoveProjection(projDir); err == nil {
+		t.Fatal("expected RemoveProjection to fail")
+	}
+	if err := CanRemoveProjection(projDir, manifest); err != nil {
+		t.Fatalf("CanRemoveProjection() error = %v; manifest should still be readable", err)
 	}
 }
