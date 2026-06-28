@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 )
 
+var osSymlink = os.Symlink
+
 func Execute(actions []Action) error {
 	for _, action := range actions {
 		if err := os.RemoveAll(action.Dest); err != nil {
@@ -16,13 +18,16 @@ func Execute(actions []Action) error {
 			return err
 		}
 
+		effectiveMode := action.Mode
 		switch action.Mode {
 		case "copy":
 			if err := copyDir(action.Source, action.Dest); err != nil {
 				return err
 			}
 		case "link", "":
-			if err := os.Symlink(action.Source, action.Dest); err != nil {
+			effectiveMode = "link"
+			if err := osSymlink(action.Source, action.Dest); err != nil {
+				effectiveMode = "copy"
 				if err := copyDir(action.Source, action.Dest); err != nil {
 					return err
 				}
@@ -31,7 +36,9 @@ func Execute(actions []Action) error {
 			return fmt.Errorf("unknown install mode %q", action.Mode)
 		}
 		if action.Projection != nil {
-			if err := WriteProjectionManifest(action.Dest, *action.Projection); err != nil {
+			manifest := *action.Projection
+			manifest.Mode = effectiveMode
+			if err := WriteProjectionManifest(action.Dest, manifest); err != nil {
 				return err
 			}
 		}
