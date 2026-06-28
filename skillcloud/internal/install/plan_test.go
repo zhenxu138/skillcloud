@@ -50,6 +50,48 @@ func TestPlanEnablePreservesExistingSkills(t *testing.T) {
 	}
 }
 
+func TestPlanEnablePreservesExistingMode(t *testing.T) {
+	cfg := project.Config{Targets: map[string]project.TargetConfig{
+		"codex": {
+			Mode: "copy",
+			Skills: []project.SkillRef{
+				{ID: "coding/tdd", As: "tdd"},
+			},
+		},
+	}}
+	skills := []skill.Skill{{ID: "coding/code-review", Name: "code-review", Path: filepath.FromSlash("/repo/skills/coding/code-review")}}
+
+	plan, err := PlanEnable(skills, "codex", "project", "link", filepath.FromSlash("/project/.agents/skills"), cfg)
+	if err != nil {
+		t.Fatalf("PlanEnable() error = %v", err)
+	}
+
+	if got := plan.ProjectConfig.Targets["codex"].Mode; got != "copy" {
+		t.Fatalf("mode preserved = %q, want %q", got, "copy")
+	}
+}
+
+func TestPlanEnableDefaultsModeWhenEmpty(t *testing.T) {
+	cfg := project.Config{Targets: map[string]project.TargetConfig{
+		"codex": {
+			Mode: "",
+			Skills: []project.SkillRef{
+				{ID: "coding/tdd", As: "tdd"},
+			},
+		},
+	}}
+	skills := []skill.Skill{{ID: "coding/code-review", Name: "code-review", Path: filepath.FromSlash("/repo/skills/coding/code-review")}}
+
+	plan, err := PlanEnable(skills, "codex", "project", "link", filepath.FromSlash("/project/.agents/skills"), cfg)
+	if err != nil {
+		t.Fatalf("PlanEnable() error = %v", err)
+	}
+
+	if got := plan.ProjectConfig.Targets["codex"].Mode; got != "link" {
+		t.Fatalf("mode defaulted = %q, want %q", got, "link")
+	}
+}
+
 func TestPlanEnableDetectsAliasConflict(t *testing.T) {
 	skills := []skill.Skill{
 		{ID: "coding/review", Name: "review", Path: filepath.FromSlash("/repo/skills/coding/review")},

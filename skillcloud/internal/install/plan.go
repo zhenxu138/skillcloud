@@ -30,7 +30,6 @@ func PlanEnable(skills []skill.Skill, targetName string, scope string, mode stri
 	if targetConfig.Mode == "" {
 		targetConfig.Mode = mode
 	}
-	targetConfig.Mode = mode
 
 	refs := append([]project.SkillRef(nil), targetConfig.Skills...)
 	aliasToID := map[string]string{}
