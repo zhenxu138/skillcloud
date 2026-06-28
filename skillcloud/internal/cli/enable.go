@@ -67,6 +67,16 @@ func runEnable(cmd *cobra.Command, patterns []string, targetName string, scope s
 		return fmt.Errorf("no skills matched %s", strings.Join(patterns, ", "))
 	}
 
+	return runEnableWithConfig(cmd, selected, globalConfig, targetName, scope, mode)
+}
+
+func runEnableWithConfig(cmd *cobra.Command, selected []skill.Skill, globalConfig config.Config, targetName string, scope string, mode string) error {
+	if scope != "project" && scope != "global" {
+		return fmt.Errorf("unknown scope %q", scope)
+	}
+	if mode != "link" && mode != "copy" {
+		return fmt.Errorf("unknown mode %q", mode)
+	}
 	projectRoot, err := os.Getwd()
 	if err != nil {
 		return err
@@ -79,7 +89,6 @@ func runEnable(cmd *cobra.Command, patterns []string, targetName string, scope s
 	if err != nil {
 		return err
 	}
-
 	plan, err := install.PlanEnable(selected, targetName, scope, mode, destRoot, projectConfig)
 	if err != nil {
 		return err
