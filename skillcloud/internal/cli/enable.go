@@ -200,10 +200,19 @@ func disableProjectSkills(root string, globalConfig config.Config, projectConfig
 		kept := targetConfig.Skills[:0]
 		for _, ref := range targetConfig.Skills {
 			if remove[ref.As] || remove[ref.ID] {
-				removed++
-				if err := os.RemoveAll(filepath.Join(destRoot, ref.As)); err != nil {
+				dest := filepath.Join(destRoot, ref.As)
+				expected := install.ProjectionManifest{
+					SourceID: ref.ID,
+					Target:   targetName,
+					Scope:    "project",
+				}
+				if err := install.CanRemoveProjection(dest, expected); err != nil {
 					return project.Config{}, removed, err
 				}
+				if err := os.RemoveAll(dest); err != nil {
+					return project.Config{}, removed, err
+				}
+				removed++
 				continue
 			}
 			kept = append(kept, ref)
