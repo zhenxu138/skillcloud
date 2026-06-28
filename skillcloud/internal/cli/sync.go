@@ -3,9 +3,11 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/skillcloud/skillcloud/internal/config"
 	"github.com/skillcloud/skillcloud/internal/gitstore"
+	"github.com/skillcloud/skillcloud/internal/project"
 	"github.com/skillcloud/skillcloud/internal/skill"
 	"github.com/spf13/cobra"
 )
@@ -74,10 +76,11 @@ func newStatusCommand() *cobra.Command {
 		Short: "Show skill repository status",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			store, err := loadConfiguredStore()
+			cfg, repoDir, err := loadGlobalConfigAndRepoDir()
 			if err != nil {
 				return err
 			}
+			store := gitstore.Store{RepoDir: repoDir, RepoURL: cfg.RepoURL}
 			status, err := store.Status(context.Background())
 			if err != nil {
 				return err
@@ -86,10 +89,31 @@ func newStatusCommand() *cobra.Command {
 			out := cmd.OutOrStdout()
 			if !status.Dirty {
 				fmt.Fprintln(out, "clean")
-				return nil
+			} else {
+				for _, line := range status.Lines {
+					fmt.Fprintln(out, line)
+				}
 			}
-			for _, line := range status.Lines {
-				fmt.Fprintln(out, line)
+
+			root, _ := os.Getwd()
+			projectConfig, loadErr := project.Load(root)
+			if loadErr == nil {
+				index, indexErr := skill.BuildIndex(store.RepoDir)
+				if indexErr == nil {
+					for targetName := range projectConfig.Targets {
+						destRoot, destErr := targetDestRoot(cfg, targetName, "project", root)
+						if destErr != nil {
+							continue
+						}
+						report := project.Inspect(projectConfig, index.Skills, destRoot, targetName)
+						for _, ref := range report.Missing {
+							fmt.Fprintf(out, "missing\t%s\t%s\n", targetName, ref.ID)
+						}
+						for _, alias := range report.Unmanaged {
+							fmt.Fprintf(out, "unmanaged\t%s\t%s\n", targetName, alias)
+						}
+					}
+				}
 			}
 			return nil
 		},
