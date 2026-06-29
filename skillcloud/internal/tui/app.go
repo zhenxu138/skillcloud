@@ -56,6 +56,11 @@ func (m AppModel) View() string {
 		fmt.Fprintf(&b, "%s %s\n", marker, name)
 	}
 	b.WriteString("\nTab switch view | q quit\n")
+	if m.ViewName() == "Add" {
+		addModel := NewAddModel(AddOptions{})
+		b.WriteString("\n")
+		b.WriteString(addModel.View())
+	}
 	return b.String()
 }
 
