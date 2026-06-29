@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/skillcloud/skillcloud/internal/tui"
 )
 
 func TestRootCommandHasExpectedSubcommands(t *testing.T) {
@@ -93,5 +95,27 @@ func TestInitDoesNotSaveConfigWhenCloneFails(t *testing.T) {
 	configPath := filepath.Join(home, ".skillcloud", "config.yaml")
 	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
 		t.Fatalf("config file exists after failed clone, Stat error = %v", err)
+	}
+}
+
+func TestRootCommandNoArgsRunsMainTUI(t *testing.T) {
+	oldRunner := runMainTUI
+	called := false
+	runMainTUI = func(opts tui.AppOptions) error {
+		called = true
+		if opts.Target != "codex" || opts.Scope != "project" {
+			t.Fatalf("opts = %#v", opts)
+		}
+		return nil
+	}
+	t.Cleanup(func() { runMainTUI = oldRunner })
+
+	cmd := NewRootCommand()
+	cmd.SetArgs(nil)
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if !called {
+		t.Fatal("expected main TUI runner to be called")
 	}
 }

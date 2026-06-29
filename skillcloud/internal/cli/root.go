@@ -1,11 +1,18 @@
 package cli
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/skillcloud/skillcloud/internal/tui"
+	"github.com/spf13/cobra"
+)
 
 func NewRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "skillcloud",
 		Short: "Sync and enable AI agent skills from a personal Git repository",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runMainTUI(tui.AppOptions{Target: "codex", Scope: "project"})
+		},
 	}
 
 	cmd.AddCommand(newInitCommand())
