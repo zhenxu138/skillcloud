@@ -7,6 +7,7 @@ import (
 
 	"github.com/skillcloud/skillcloud/internal/config"
 	"github.com/skillcloud/skillcloud/internal/gitstore"
+	"github.com/skillcloud/skillcloud/internal/install"
 	"github.com/skillcloud/skillcloud/internal/project"
 	"github.com/skillcloud/skillcloud/internal/skill"
 	"github.com/spf13/cobra"
@@ -105,7 +106,7 @@ func newStatusCommand() *cobra.Command {
 						if destErr != nil {
 							continue
 						}
-						report := project.Inspect(projectConfig, index.Skills, destRoot, targetName)
+						report := project.Inspect(projectConfig, index.Skills, destRoot, targetName, readProjectionManifest)
 						for _, ref := range report.Missing {
 							fmt.Fprintf(out, "missing\t%s\t%s\n", targetName, ref.ID)
 						}
@@ -149,4 +150,9 @@ func rebuildIndex(repoDir string) error {
 		return err
 	}
 	return skill.SaveIndex(indexPath, index)
+}
+
+func readProjectionManifest(dir string) error {
+	_, err := install.ReadProjectionManifest(dir)
+	return err
 }

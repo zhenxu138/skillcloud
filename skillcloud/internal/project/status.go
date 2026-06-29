@@ -12,7 +12,7 @@ type StatusReport struct {
 	Unmanaged []string
 }
 
-func Inspect(cfg Config, skills []skill.Skill, destRoot string, targetName string) StatusReport {
+func Inspect(cfg Config, skills []skill.Skill, destRoot string, targetName string, manifestReader func(dir string) error) StatusReport {
 	known := map[string]bool{}
 	for _, s := range skills {
 		known[s.ID] = true
@@ -40,25 +40,10 @@ func Inspect(cfg Config, skills []skill.Skill, destRoot string, targetName strin
 		if configuredAliases[alias] {
 			continue
 		}
-		if hasProjectionManifest(destRoot, alias) {
+		if manifestReader(filepath.Join(destRoot, alias)) == nil {
 			continue
 		}
 		report.Unmanaged = append(report.Unmanaged, alias)
 	}
 	return report
-}
-
-const projectionManifestFile = ".skillcloud-projection.json"
-
-func hasProjectionManifest(destRoot, alias string) bool {
-	skillPath := filepath.Join(destRoot, alias)
-	info, err := os.Lstat(skillPath)
-	if err == nil && info.Mode()&os.ModeSymlink != 0 {
-		manifestPath := filepath.Join(destRoot, "."+alias+projectionManifestFile)
-		_, err := os.Stat(manifestPath)
-		return err == nil
-	}
-	manifestPath := filepath.Join(skillPath, projectionManifestFile)
-	_, err = os.Stat(manifestPath)
-	return err == nil
 }
