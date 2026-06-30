@@ -35,6 +35,8 @@ func Skill(skillDir string) (SkillMetadata, []error) {
 
 func SkillMarkdown(data []byte) (SkillMetadata, []error) {
 	data = bytes.TrimPrefix(data, []byte{0xef, 0xbb, 0xbf})
+	// Normalize CRLF to LF so frontmatter detection and YAML parsing are line-ending agnostic.
+	data = bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n"))
 	if !bytes.HasPrefix(data, []byte("---\n")) {
 		return SkillMetadata{}, []error{fmt.Errorf("no YAML frontmatter found")}
 	}
@@ -54,11 +56,13 @@ func SkillMarkdown(data []byte) (SkillMetadata, []error) {
 	}
 
 	allowed := map[string]bool{
-		"name":          true,
-		"description":   true,
-		"license":       true,
-		"allowed-tools": true,
-		"metadata":      true,
+		"name":                    true,
+		"description":             true,
+		"license":                 true,
+		"allowed-tools":           true,
+		"metadata":                true,
+		"disable-model-invocation": true,
+		"argument-hint":           true,
 	}
 	var unexpected []string
 	for key := range raw {

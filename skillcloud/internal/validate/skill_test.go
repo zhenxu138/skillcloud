@@ -74,3 +74,30 @@ func TestSkillRejectsInvalidDescription(t *testing.T) {
 		t.Fatalf("errors = %#v, want angle bracket rejection", errs)
 	}
 }
+
+func TestSkillAcceptsCommonSkillHubKeys(t *testing.T) {
+	dir := t.TempDir()
+	writeSkillMarkdown(t, dir, "---\nname: ask-matt\ndescription: Ask which skill fits.\ndisable-model-invocation: true\nargument-hint: \"What do you want to ask?\"\n---\nBody\n")
+
+	meta, errs := Skill(dir)
+	if len(errs) != 0 {
+		t.Fatalf("Skill() errors = %#v", errs)
+	}
+	if meta.Name != "ask-matt" {
+		t.Fatalf("Name = %q, want ask-matt", meta.Name)
+	}
+}
+
+func TestSkillAcceptsCRLFLineEndings(t *testing.T) {
+	dir := t.TempDir()
+	writeSkillMarkdown(t, dir, "---\r\nname: code-review\r\ndescription: Review code.\r\n---\r\nBody\r\n")
+
+	meta, errs := Skill(dir)
+	if len(errs) != 0 {
+		t.Fatalf("Skill() errors = %#v", errs)
+	}
+	if meta.Name != "code-review" {
+		t.Fatalf("Name = %q, want code-review", meta.Name)
+	}
+}
+
