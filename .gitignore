@@ -1,11 +1,16 @@
 .claude/
+.agents/
+.skillcloud.yaml
 my-agent-skills/
 external-skill/
 skillcloud-test-home/
 skillcloud-test-project/
 skills-collection-work/
-my-agent-skills/
-external-skill/
-skillcloud-test-home/
-skillcloud-test-project/
-skills-collection-work/
+
+# Local planning and agent workflow notes.
+docs/superpowers/
+.superpowers/
+
+# Local build outputs.
+skillcloud
+skillcloud.exe
