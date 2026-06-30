@@ -84,6 +84,7 @@ my-project/
 | Area | What skillcloud does |
 | --- | --- |
 | Sync | Pull and push a Git-hosted skills repository. |
+| Import | Add existing local skill directories to your library with `skillcloud add`. |
 | Organization | Keep skills in nested categories instead of one flat folder. |
 | Selection | Enable explicit skills, many skills, or `category/*`. |
 | TUI | Browse and select skills interactively. |
@@ -278,7 +279,6 @@ Use one repository for the tool and another repository for your skills.
 ## Roadmap
 
 - Profile-based bulk enablement such as `work`, `personal`, or `frontend`.
-- Import existing skills from local agent directories.
 - Create new skills from templates.
 - Rename and remove skills safely.
 - Lockfile support for source commits and hashes.

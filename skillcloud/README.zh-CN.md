@@ -84,6 +84,7 @@ my-project/
 | 领域 | skillcloud 做什么 |
 | --- | --- |
 | 同步 | 拉取和推送 Git 托管的 skills 仓库。 |
+| 导入 | 用 `skillcloud add` 将本地已有 skill 目录加入 library。 |
 | 整理 | 用多级分类目录管理 skill，而不是全部放进一个大平铺目录。 |
 | 选择 | 支持启用单个 skill、多个 skill，或 `category/*` 整个分类。 |
 | TUI | 支持交互式浏览和选择 skill。 |
@@ -280,8 +281,8 @@ skillcloud doctor
 ## 路线图
 
 - 支持 `work`、`personal`、`frontend` 等 profile 批量启用。
-- 从本地 agent 目录导入已有 skills。
 - 用模板创建新 skill。
+- 安全地重命名和删除 skill。
 - 安全地重命名和删除 skill。
 - 增加 lockfile，记录来源 commit 和 hash。
 - 增强脚本和 secret 扫描。
