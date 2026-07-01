@@ -12,5 +12,5 @@ docs/superpowers/
 .superpowers/
 
 # Local build outputs.
-skillcloud
-skillcloud.exe
+/skillcloud
+/skillcloud.exe
