@@ -145,7 +145,17 @@ skillcloud
 
 By default this manages Codex project skills.
 
-Inside the TUI:
+The TUI opens a launcher menu. Move with Up/Down (or j/k), run an entry with Enter, cycle with Tab, and quit with q or Esc.
+
+| Entry | What it does |
+| --- | --- |
+| Browse | Select skills for the current project interactively |
+| Enabled | Review and disable enabled skills for the current project |
+| Add | Import a local skill directory into the library |
+| Changes | Show library repo changes and project projection drift |
+| Sync | Pull skill updates from the remote and rebuild the index |
+| Push | Commit and push local skill edits to the remote |
+| Settings | Show the current skillcloud configuration |
 
 | Key | Action |
 | --- | --- |
@@ -155,7 +165,7 @@ Inside the TUI:
 | `Enter` | Review and apply changes |
 | `q` | Quit without saving |
 
-Checked skills are used for the current project. Unchecking an already used skill removes it from the project.
+In Browse, checked skills are used for the current project. Unchecking an already used skill removes it from the project. In Add, press b on the source field to browse the filesystem for a skill directory.
 
 Add a downloaded skill to your skills repository:
 
@@ -307,4 +317,3 @@ Issues and pull requests are welcome. Please keep changes focused and include te
 ## License
 
 MIT License. See [LICENSE](LICENSE).
-

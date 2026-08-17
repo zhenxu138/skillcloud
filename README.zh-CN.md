@@ -145,7 +145,17 @@ skillcloud
 
 默认管理 Codex 项目级 skills。
 
-TUI 按键：
+TUI 打开一个启动菜单。用上下方向键（或 j/k）移动，Enter 执行选中项，Tab 循环切换，q 或 Esc 退出。
+
+| 菜单项 | 功能 |
+| --- | --- |
+| Browse | 交互式选择当前项目要启用的 skill |
+| Enabled | 查看并取消当前项目已启用的 skill |
+| Add | 将本地 skill 目录导入到 library |
+| Changes | 显示 library 仓库改动和项目投影漂移 |
+| Sync | 从远端拉取 skill 更新并重建索引 |
+| Push | 提交并推送本地 skill 改动到远端 |
+| Settings | 显示当前 skillcloud 配置 |
 
 | 按键 | 行为 |
 | --- | --- |
@@ -155,7 +165,7 @@ TUI 按键：
 | `Enter` | 查看摘要并应用变更 |
 | `q` | 不保存退出 |
 
-勾选的 skill 会在当前项目使用。取消勾选已经使用的 skill，会从当前项目移除它。
+在 Browse 中，勾选的 skill 会在当前项目使用，取消勾选已使用的 skill 会从项目移除它。在 Add 中，在 source 字段按 b 可浏览文件系统选择 skill 目录。
 
 将下载的 skill 添加到 skills 仓库：
 
@@ -310,4 +320,3 @@ powershell -ExecutionPolicy Bypass -File scripts\smoke.ps1
 ## 许可证
 
 MIT License。详见 [LICENSE](LICENSE)。
-

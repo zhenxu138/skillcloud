@@ -14,6 +14,9 @@ type ManageOptions struct {
 	Scope            string
 	Mode             string
 	InitiallyEnabled []string
+	// InitialFilterView preselects the all/enabled/disabled/changed filter.
+	// 0=all, 1=enabled, 2=disabled, 3=changed. Defaults to all when zero.
+	InitialFilterView int
 }
 
 type ManageResult struct {
@@ -61,12 +64,13 @@ func NewManageModel(opts ManageOptions) ManageModel {
 		initial[id] = true
 	}
 	return ManageModel{
-		Skills:   opts.Skills,
-		Target:   opts.Target,
-		Scope:    opts.Scope,
-		Mode:     opts.Mode,
-		Selected: selected,
-		Initial:  initial,
+		Skills:     opts.Skills,
+		Target:     opts.Target,
+		Scope:      opts.Scope,
+		Mode:       opts.Mode,
+		Selected:   selected,
+		Initial:    initial,
+		FilterView: manageView(opts.InitialFilterView),
 	}
 }
 
@@ -352,3 +356,6 @@ func Manage(opts ManageOptions) (ManageResult, error) {
 	model := result.(ManageModel)
 	return model.Result(), nil
 }
+
+// ViewEnabled returns the enabled-filter value for ManageOptions.InitialFilterView.
+func ViewEnabled() int { return int(viewEnabled) }

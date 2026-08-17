@@ -123,6 +123,28 @@ func TestManageModelTabCyclesViews(t *testing.T) {
 	}
 }
 
+func TestManageModelInitialFilterViewEnabled(t *testing.T) {
+	m := NewManageModel(ManageOptions{
+		Skills:            testSkills(),
+		Target:            "codex",
+		Scope:             "project",
+		Mode:              "link",
+		InitiallyEnabled:  []string{"coding/code-review", "stock/risk-control"},
+		InitialFilterView: ViewEnabled(),
+	})
+	if m.viewName() != "Enabled" {
+		t.Fatalf("initial view = %q, want Enabled", m.viewName())
+	}
+	if got := len(m.visibleSkills()); got != 2 {
+		t.Fatalf("enabled visible count = %d, want 2", got)
+	}
+	for _, s := range m.visibleSkills() {
+		if !m.Selected[s.ID] {
+			t.Fatalf("visible skill %q is not enabled", s.ID)
+		}
+	}
+}
+
 func TestManageModelEnterRequiresConfirmationWhenChanged(t *testing.T) {
 	m := NewManageModel(ManageOptions{
 		Skills:           testSkills(),

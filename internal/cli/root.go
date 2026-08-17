@@ -11,7 +11,7 @@ func NewRootCommand() *cobra.Command {
 		Short: "Sync and enable AI agent skills from a personal Git repository",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runMainTUI(tui.AppOptions{Target: "codex", Scope: "project"})
+			return runMainTUI(cmd, tui.AppOptions{Target: "codex", Scope: "project", Mode: "link"})
 		},
 	}
 

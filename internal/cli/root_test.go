@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/skillcloud/skillcloud/internal/tui"
+	"github.com/spf13/cobra"
 )
 
 func TestRootCommandHasExpectedSubcommands(t *testing.T) {
@@ -101,9 +102,9 @@ func TestInitDoesNotSaveConfigWhenCloneFails(t *testing.T) {
 func TestRootCommandNoArgsRunsMainTUI(t *testing.T) {
 	oldRunner := runMainTUI
 	called := false
-	runMainTUI = func(opts tui.AppOptions) error {
+	runMainTUI = func(cmd *cobra.Command, opts tui.AppOptions) error {
 		called = true
-		if opts.Target != "codex" || opts.Scope != "project" {
+		if opts.Target != "codex" || opts.Scope != "project" || opts.Mode != "link" {
 			t.Fatalf("opts = %#v", opts)
 		}
 		return nil
