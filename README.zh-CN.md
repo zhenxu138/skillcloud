@@ -219,9 +219,10 @@ skills:
 
 - `skills` 可以写精确的 skill ID，也可以写唯一的 skill 名称；`as` 覆盖投影后的目录名。
 - 如果省略 `skills` 且 `GROUP.yaml` 位于 `skills/` 下，组会自动包含该目录下的全部 skill。
-- `agents` 指向一个 Markdown 文件。启用组时，它的内容会写入项目 `AGENTS.md` 的托管区块；移除组时只删除这个区块。
+- `agents` 指向一个 Markdown 文件。省略时，skillcloud 会依次检查组目录下的 `AGENTS.md` 和 `.codex/agent.md`。启用组时，它的内容会写入项目 `AGENTS.md` 的托管区块；移除组时只删除这个区块。
 - 技能组只支持项目作用域。`.skillcloud.yaml` 会记录组，并给组新增的 skill 打上 `group` 标记；移除组不会删掉之前手动启用的同名 skill。
 - `--no-agents` 会记录组但不写入规则；后续 `apply` 也会保持抑制状态。
+- Codex 在会话启动时读取 `AGENTS.md`，所以 `group use` 后需要新会话才能加载新规则。
 
 ```bash
 skillcloud group list

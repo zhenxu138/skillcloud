@@ -206,8 +206,8 @@ skills:
 
 func TestGroupUseRulesOnly(t *testing.T) {
 	repo, projectRoot := setupGroupProject(t)
-	writeGroupFile(t, repo, "groups/rules/GROUP.yaml", "name: rules\ntitle: Rules\nagents: AGENTS.md\n")
-	writeGroupFile(t, repo, "groups/rules/AGENTS.md", "Always run tests.\n")
+	writeGroupFile(t, repo, "groups/rules/GROUP.yaml", "name: rules\ntitle: Rules\n")
+	writeGroupFile(t, repo, "groups/rules/.codex/agent.md", "Always run tests.\n")
 
 	out, err := runCLI(t, "group", "use", "rules")
 	if err != nil {

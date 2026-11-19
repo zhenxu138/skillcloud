@@ -3,6 +3,7 @@ package group
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/skillcloud/skillcloud/internal/skill"
@@ -95,6 +96,34 @@ func TestDiscoverInlineGroupDefaultsToDirectory(t *testing.T) {
 	}
 	if len(groups[0].Members) != 2 {
 		t.Fatalf("members = %#v", groups[0].Members)
+	}
+}
+
+func TestDiscoverInlineGroupUsesCodexAgentMD(t *testing.T) {
+	repo := t.TempDir()
+	writeSkill(t, repo, "sop/demo/a", "a")
+	writeManifest(t, repo, "skills/sop/demo", "name: demo\n")
+	agentsDir := filepath.Join(repo, "skills", "sop", "demo", ".codex")
+	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(agentsDir, "agent.md"), []byte("Use the demo rule.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	skills, err := skill.Discover(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	groups, err := Discover(repo, skills)
+	if err != nil {
+		t.Fatalf("Discover() error = %v", err)
+	}
+	if len(groups) != 1 {
+		t.Fatalf("got %d groups", len(groups))
+	}
+	if !strings.HasSuffix(groups[0].AgentsPath, filepath.Join(".codex", "agent.md")) {
+		t.Fatalf("agents path = %q", groups[0].AgentsPath)
 	}
 }
 

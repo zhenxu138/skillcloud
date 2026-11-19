@@ -174,9 +174,13 @@ func loadGroup(repoDir string, inline bool, manifestPath string, skills []skill.
 			return Group{}, fmt.Errorf("%s: %w", manifestPath, err)
 		}
 	} else {
-		candidate := filepath.Join(dir, "AGENTS.md")
-		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
-			agentsPath = candidate
+		candidates := []string{"AGENTS.md", filepath.Join(".codex", "agent.md")}
+		for _, candidate := range candidates {
+			path := filepath.Join(dir, candidate)
+			if info, err := os.Stat(path); err == nil && !info.IsDir() {
+				agentsPath = path
+				break
+			}
 		}
 	}
 

@@ -215,7 +215,7 @@ func newGroupUseCommand() *cobra.Command {
 
 			fmt.Fprintf(cmd.OutOrStdout(), "enabled %d skill(s) from group %s for %s\n", len(selected), g.Name, targetName)
 			if agentsUpdated {
-				fmt.Fprintln(cmd.OutOrStdout(), "updated AGENTS.md with group rules")
+				fmt.Fprintln(cmd.OutOrStdout(), "updated AGENTS.md with group rules; start a new Codex session to load them")
 			}
 			return nil
 		},
