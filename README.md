@@ -217,6 +217,7 @@ skills:
 
 - `skills` accepts exact skill IDs or unique skill names. `as` overrides the projected directory name.
 - If `skills` is omitted and `GROUP.yaml` is inside `skills/`, every skill under that directory is included.
+- `title` and `description` label the group; `description` is the short workflow/strength summary shown by `group list`.
 - `agents` points to a Markdown file. If omitted, skillcloud checks `AGENTS.md` and then `.codex/agent.md` in the group directory. The content is written into the project `AGENTS.md` inside a managed block, and removed when the group is removed.
 - Group enablement is project scope. `.skillcloud.yaml` records the group and tags the skills it added, so removing the group does not remove skills that were already enabled manually.
 - `--no-agents` records the group while suppressing its rules; later `apply` runs keep them suppressed.
