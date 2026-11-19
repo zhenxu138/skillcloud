@@ -10,7 +10,7 @@ import (
 func TestAppModelInitialViewShowsBrowse(t *testing.T) {
 	m := NewAppModel(AppOptions{Target: "codex", Scope: "project"})
 	view := m.View()
-	if !strings.Contains(view, "Browse") || !strings.Contains(view, "codex") {
+	if !strings.Contains(view, "Browse") || !strings.Contains(view, "codex") || !strings.Contains(view, "Choose skills for this project") {
 		t.Fatalf("View() = %q", view)
 	}
 }

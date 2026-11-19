@@ -78,13 +78,19 @@ func (m Model) SelectedIDs() []string {
 	return ids
 }
 
-func Select(skills []skill.Skill) ([]string, error) {
-	program := tea.NewProgram(NewModel(skills))
-	result, err := program.Run()
+func Select(skills []skill.Skill, target string, scope string, mode string) ([]string, error) {
+	result, err := Manage(ManageOptions{
+		Skills:           skills,
+		Target:           target,
+		Scope:            scope,
+		Mode:             mode,
+		HideEnabledCount: true,
+	})
 	if err != nil {
 		return nil, err
 	}
-	model := result.(Model)
-	return model.SelectedIDs(), nil
+	if !result.Apply {
+		return nil, nil
+	}
+	return result.SelectedIDs, nil
 }
-

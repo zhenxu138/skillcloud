@@ -156,12 +156,13 @@ func runSelectEnable(cmd *cobra.Command, targetName string, scope string, mode s
 	if err != nil {
 		return err
 	}
-	ids, err := tui.Select(index.Skills)
+	ids, err := tui.Select(index.Skills, targetName, scope, mode)
 	if err != nil {
 		return err
 	}
 	if len(ids) == 0 {
-		return fmt.Errorf("no skills selected")
+		fmt.Fprintln(cmd.OutOrStdout(), "selection canceled")
+		return nil
 	}
 	return runEnable(cmd, ids, targetName, scope, mode)
 }

@@ -33,6 +33,16 @@ const (
 
 var appViews = []string{"Browse", "Enabled", "Add", "Changes", "Sync", "Push", "Settings"}
 
+var appDescriptions = []string{
+	"Choose skills for this project",
+	"Review and remove enabled skills",
+	"Import a local skill directory",
+	"Show repo changes and projection drift",
+	"Pull updates from the remote",
+	"Push local skill edits",
+	"Show target, scope and mode",
+}
+
 var appActions = []AppAction{
 	ActionBrowse,
 	ActionEnabled,
@@ -99,18 +109,23 @@ func (m AppModel) ViewName() string {
 
 func (m AppModel) View() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "skillcloud | Target: %s | Scope: %s | Mode: %s\n\n", m.Target, m.Scope, m.Mode)
+	fmt.Fprintf(&b, "%s\n", tuiTitle.Render("skillcloud"))
+	fmt.Fprintf(&b, "%s\n\n", tuiDim.Render(fmt.Sprintf("Target: %s · Scope: %s · Mode: %s", m.Target, m.Scope, m.Mode)))
 	for i, name := range appViews {
 		marker := " "
 		if i == m.view {
-			marker = ">"
+			marker = tuiCursor.Render(">")
 		}
-		fmt.Fprintf(&b, "%s %s\n", marker, name)
+		description := ""
+		if i < len(appDescriptions) {
+			description = appDescriptions[i]
+		}
+		fmt.Fprintf(&b, "%s %-10s %s\n", marker, name, tuiDim.Render(description))
 	}
 	if strings.TrimSpace(m.Status) != "" {
-		fmt.Fprintf(&b, "\n%s\n", m.Status)
+		fmt.Fprintf(&b, "\n%s\n", tuiEnabled.Render(m.Status))
 	}
-	b.WriteString("\nUp/Down select | Enter run | Tab cycle | q quit\n")
+	b.WriteString("\n" + tuiDim.Render("Up/Down select · Enter run · Tab cycle · q quit") + "\n")
 	return b.String()
 }
 

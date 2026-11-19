@@ -5,7 +5,17 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/skillcloud/skillcloud/internal/skill"
+)
+
+var (
+	tuiTitle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12"))
+	tuiCursor  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("14"))
+	tuiEnabled = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
+	tuiAdd     = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
+	tuiRemove  = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+	tuiDim     = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
 )
 
 type ManageOptions struct {
@@ -14,6 +24,9 @@ type ManageOptions struct {
 	Scope            string
 	Mode             string
 	InitiallyEnabled []string
+	// HideEnabledCount is used by select-only flows that do not load the
+	// project's existing enabled skills.
+	HideEnabledCount bool
 	// InitialFilterView preselects the all/enabled/disabled/changed filter.
 	// 0=all, 1=enabled, 2=disabled, 3=changed. Defaults to all when zero.
 	InitialFilterView int
@@ -42,18 +55,21 @@ const (
 )
 
 type ManageModel struct {
-	Skills     []skill.Skill
-	Target     string
-	Scope      string
-	Mode       string
-	Cursor     int
-	Query      string
-	Searching  bool
-	FilterView manageView
-	Screen     manageScreen
-	Selected   map[string]bool
-	Initial    map[string]bool
-	Applied    bool
+	Skills           []skill.Skill
+	Target           string
+	Scope            string
+	Mode             string
+	Width            int
+	Height           int
+	HideEnabledCount bool
+	Cursor           int
+	Query            string
+	Searching        bool
+	FilterView       manageView
+	Screen           manageScreen
+	Selected         map[string]bool
+	Initial          map[string]bool
+	Applied          bool
 }
 
 func NewManageModel(opts ManageOptions) ManageModel {
@@ -63,21 +79,37 @@ func NewManageModel(opts ManageOptions) ManageModel {
 		selected[id] = true
 		initial[id] = true
 	}
-	return ManageModel{
-		Skills:     opts.Skills,
-		Target:     opts.Target,
-		Scope:      opts.Scope,
-		Mode:       opts.Mode,
-		Selected:   selected,
-		Initial:    initial,
-		FilterView: manageView(opts.InitialFilterView),
+	m := ManageModel{
+		Skills:           opts.Skills,
+		Target:           opts.Target,
+		Scope:            opts.Scope,
+		Mode:             opts.Mode,
+		Width:            100,
+		Height:           24,
+		HideEnabledCount: opts.HideEnabledCount,
+		Selected:         selected,
+		Initial:          initial,
+		FilterView:       manageView(opts.InitialFilterView),
 	}
+	if m.FilterView == viewAll {
+		for i, s := range m.Skills {
+			if m.Selected[s.ID] {
+				m.Cursor = i
+				break
+			}
+		}
+	}
+	return m
 }
 
 func (m ManageModel) Init() tea.Cmd { return nil }
 
 func (m ManageModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.Width = msg.Width
+		m.Height = msg.Height
+		return m, nil
 	case tea.KeyMsg:
 		if m.Screen == screenConfirm {
 			return m.updateConfirm(msg)
@@ -103,6 +135,18 @@ func (m ManageModel) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.Cursor < len(m.visibleSkills())-1 {
 			m.Cursor++
 		}
+	case "home", "g":
+		m.Cursor = 0
+	case "end", "G":
+		if visible := m.visibleSkills(); len(visible) > 0 {
+			m.Cursor = len(visible) - 1
+		}
+	case "pgup":
+		m.Cursor -= m.pageSize()
+		m.clampCursor()
+	case "pgdown":
+		m.Cursor += m.pageSize()
+		m.clampCursor()
 	case " ":
 		visible := m.visibleSkills()
 		if len(visible) > 0 {
@@ -175,64 +219,165 @@ func (m ManageModel) View() string {
 }
 
 func (m ManageModel) listView() string {
-	var b strings.Builder
-	fmt.Fprintf(&b, "Target: %s | Scope: %s | Mode: %s\n", m.Target, m.Scope, m.Mode)
-	if m.Searching || m.Query != "" {
-		fmt.Fprintf(&b, "Filter: %s\n", m.Query)
-	}
-	fmt.Fprintf(&b, "View: %s\n\n", m.viewName())
-
 	visible := m.visibleSkills()
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s\n", tuiTitle.Render(fmt.Sprintf("skillcloud · %s · %s · %s", m.Target, m.Scope, m.Mode)))
+	if m.Searching {
+		fmt.Fprintf(&b, "Search: %s_\n", m.Query)
+	} else if m.Query != "" {
+		fmt.Fprintf(&b, "Filter: %s  (esc clears)\n", m.Query)
+	}
+	viewLine := fmt.Sprintf("View: %s · %d skill(s)", m.viewName(), len(visible))
+	if !m.HideEnabledCount {
+		viewLine += fmt.Sprintf(" · %d enabled", len(m.Initial))
+	}
+	fmt.Fprintf(&b, "%s\n", tuiDim.Render(viewLine))
+
 	if len(visible) == 0 {
-		b.WriteString("No matching skills\n\n")
+		b.WriteString("\nNo skills match this view or filter.\n\n")
 	} else {
-		for i, s := range visible {
+		start, end := m.window(len(visible))
+		fmt.Fprintf(&b, "%s\n\n", tuiDim.Render(fmt.Sprintf("Showing %d-%d of %d", start+1, end, len(visible))))
+		for i := start; i < end; i++ {
+			s := visible[i]
 			cursor := " "
 			if i == m.Cursor {
-				cursor = ">"
+				cursor = tuiCursor.Render(">")
 			}
-			checked := "[ ]"
+			checked := tuiDim.Render("[ ]")
 			if m.Selected[s.ID] {
-				checked = "[x]"
+				checked = tuiEnabled.Render("[x]")
 			}
 			marker := " "
 			if m.Selected[s.ID] && !m.Initial[s.ID] {
-				marker = "+"
+				marker = tuiAdd.Render("+")
+			} else if !m.Selected[s.ID] && m.Initial[s.ID] {
+				marker = tuiRemove.Render("-")
 			}
-			if !m.Selected[s.ID] && m.Initial[s.ID] {
-				marker = "-"
+			group := padRight(groupLabel(s.ID), 12)
+			name := padRight(skillLabel(s), 26)
+			descWidth := m.Width - 47
+			if descWidth < 12 {
+				descWidth = 12
 			}
-			fmt.Fprintf(&b, "%s %s%s %-28s %s\n", cursor, marker, checked, s.ID, s.Description)
+			desc := truncateRunes(s.Description, descWidth)
+			fmt.Fprintf(&b, "%s %s%s %s %s %s\n", cursor, marker, checked, group, name, tuiDim.Render(desc))
 		}
 		b.WriteString("\n")
 	}
 
 	enable, disable := m.PendingDiff()
-	fmt.Fprintf(&b, "Pending: enable %d, disable %d\n", len(enable), len(disable))
-	b.WriteString("Space toggle | / search | Tab view | Enter apply | q cancel\n")
+	fmt.Fprintf(&b, "Pending: %s %d, %s %d\n", tuiAdd.Render("+"), len(enable), tuiRemove.Render("-"), len(disable))
+	b.WriteString(tuiDim.Render("Space toggle · Enter apply · / search · Tab view") + "\n")
+	b.WriteString(tuiDim.Render("PgUp/PgDn · Home/End · q cancel") + "\n")
 	return b.String()
 }
 
 func (m ManageModel) confirmView() string {
 	enable, disable := m.PendingDiff()
 	var b strings.Builder
-	b.WriteString("Apply skill changes?\n\n")
-	if len(enable) > 0 {
-		b.WriteString("Enable:\n")
-		for _, id := range enable {
-			fmt.Fprintf(&b, "  + %s\n", id)
-		}
-		b.WriteString("\n")
-	}
-	if len(disable) > 0 {
-		b.WriteString("Disable:\n")
-		for _, id := range disable {
-			fmt.Fprintf(&b, "  - %s\n", id)
-		}
-		b.WriteString("\n")
-	}
-	b.WriteString("Enter confirm | Esc back | q cancel\n")
+	b.WriteString(tuiTitle.Render("Apply skill changes?") + "\n\n")
+	writeChangeSection(&b, "Enable", enable, "+", tuiAdd)
+	writeChangeSection(&b, "Disable", disable, "-", tuiRemove)
+	b.WriteString(tuiDim.Render("Enter confirm · Esc back · q cancel") + "\n")
 	return b.String()
+}
+
+func writeChangeSection(b *strings.Builder, title string, ids []string, prefix string, style lipgloss.Style) {
+	if len(ids) == 0 {
+		return
+	}
+	fmt.Fprintf(b, "%s (%d)\n", title, len(ids))
+	limit := len(ids)
+	if limit > 8 {
+		limit = 8
+	}
+	for _, id := range ids[:limit] {
+		fmt.Fprintf(b, "  %s %s\n", style.Render(prefix), id)
+	}
+	if len(ids) > limit {
+		fmt.Fprintf(b, "  %s\n", tuiDim.Render(fmt.Sprintf("… and %d more", len(ids)-limit)))
+	}
+	b.WriteString("\n")
+}
+
+func (m ManageModel) pageSize() int {
+	if m.Height <= 0 {
+		return 15
+	}
+	size := m.Height - 9
+	if size < 5 {
+		return 5
+	}
+	return size
+}
+
+func (m ManageModel) window(total int) (int, int) {
+	if total <= 0 {
+		return 0, 0
+	}
+	size := m.pageSize()
+	if total <= size {
+		return 0, total
+	}
+	start := m.Cursor - size/2
+	if start < 0 {
+		start = 0
+	}
+	if start > total-size {
+		start = total - size
+	}
+	return start, start + size
+}
+
+func groupLabel(id string) string {
+	parts := strings.Split(strings.Trim(id, "/"), "/")
+	if len(parts) >= 3 && parts[0] == "sop" {
+		if parts[1] == "github-spec-kit" {
+			return "spec-kit"
+		}
+		return parts[1]
+	}
+	if len(parts) > 0 {
+		return parts[0]
+	}
+	return "-"
+}
+
+func skillLabel(s skill.Skill) string {
+	if strings.TrimSpace(s.Name) != "" {
+		return s.Name
+	}
+	parts := strings.Split(strings.Trim(s.ID, "/"), "/")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+	return s.ID
+}
+
+func padRight(value string, width int) string {
+	runes := []rune(value)
+	if width <= 0 {
+		return ""
+	}
+	if len(runes) > width {
+		return string(runes[:width-1]) + "…"
+	}
+	return value + strings.Repeat(" ", width-len(runes))
+}
+
+func truncateRunes(value string, width int) string {
+	runes := []rune(strings.TrimSpace(value))
+	if width <= 0 {
+		return ""
+	}
+	if len(runes) <= width {
+		return string(runes)
+	}
+	if width == 1 {
+		return string(runes[:1])
+	}
+	return string(runes[:width-1]) + "…"
 }
 
 func (m ManageModel) Toggle(id string) {

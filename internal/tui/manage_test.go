@@ -1,7 +1,9 @@
 package tui
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,6 +15,90 @@ func testSkills() []skill.Skill {
 		{ID: "coding/code-review", Name: "code-review", Description: "Review code changes"},
 		{ID: "coding/go-code-review", Name: "go-code-review", Description: "Review Go code"},
 		{ID: "stock/risk-control", Name: "risk-control", Description: "Trading risk checklist"},
+	}
+}
+
+func manySkills(n int) []skill.Skill {
+	skills := make([]skill.Skill, 0, n)
+	for i := 0; i < n; i++ {
+		skills = append(skills, skill.Skill{
+			ID:          fmt.Sprintf("sop/matt-pocock/skill-%02d", i),
+			Name:        fmt.Sprintf("skill-%02d", i),
+			Description: "Description for skill",
+		})
+	}
+	return skills
+}
+
+func TestManageModelWindowKeepsCursorVisible(t *testing.T) {
+	m := NewManageModel(ManageOptions{Skills: manySkills(50), Target: "codex", Scope: "project", Mode: "link"})
+	m.Height = 12
+	m.Cursor = 40
+	start, end := m.window(len(m.visibleSkills()))
+	if start > 40 || 40 >= end {
+		t.Fatalf("window = %d-%d, cursor 40 not visible", start, end)
+	}
+}
+
+func TestManageModelHomeEndAndPageKeys(t *testing.T) {
+	m := NewManageModel(ManageOptions{Skills: manySkills(50), Target: "codex", Scope: "project", Mode: "link"})
+	m.Height = 12
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	m = updated.(ManageModel)
+	if m.Cursor != 49 {
+		t.Fatalf("end cursor = %d, want 49", m.Cursor)
+	}
+	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyHome})
+	m = updated.(ManageModel)
+	if m.Cursor != 0 {
+		t.Fatalf("home cursor = %d, want 0", m.Cursor)
+	}
+	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyPgDown})
+	m = updated.(ManageModel)
+	if m.Cursor != m.pageSize() {
+		t.Fatalf("pgdown cursor = %d, want %d", m.Cursor, m.pageSize())
+	}
+}
+
+func TestManageModelViewShowsGroupAndWindow(t *testing.T) {
+	m := NewManageModel(ManageOptions{Skills: manySkills(30), Target: "codex", Scope: "project", Mode: "link"})
+	m.Height = 12
+	m.Cursor = 20
+	view := m.View()
+	for _, want := range []string{"skillcloud · codex · project · link", "Showing", "matt-pocock", "Pending:"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("missing %q in view:\n%s", want, view)
+		}
+	}
+	if strings.Contains(view, "skill-00") {
+		t.Fatalf("view should render a window, got:\n%s", view)
+	}
+}
+
+func TestManageModelConfirmCapsLongLists(t *testing.T) {
+	m := NewManageModel(ManageOptions{Skills: manySkills(20), Target: "codex", Scope: "project", Mode: "link"})
+	for _, s := range m.Skills {
+		m.Selected[s.ID] = true
+	}
+	view := m.confirmView()
+	if !strings.Contains(view, "and 12 more") {
+		t.Fatalf("expected capped list, got:\n%s", view)
+	}
+}
+
+func TestGroupLabelAndSkillLabel(t *testing.T) {
+	if got := groupLabel("sop/matt-pocock/code-review"); got != "matt-pocock" {
+		t.Fatalf("groupLabel matts = %q", got)
+	}
+	if got := groupLabel("sop/github-spec-kit/speckit-plan"); got != "spec-kit" {
+		t.Fatalf("groupLabel spec-kit = %q", got)
+	}
+	if got := groupLabel("myself/learn-lite"); got != "myself" {
+		t.Fatalf("groupLabel myself = %q", got)
+	}
+	if got := skillLabel(skill.Skill{ID: "sop/matt-pocock/code-review", Name: "code-review"}); got != "code-review" {
+		t.Fatalf("skillLabel = %q", got)
 	}
 }
 
@@ -40,6 +126,19 @@ func TestManageModelInitialSelectionAndDiff(t *testing.T) {
 	}
 	if !reflect.DeepEqual(gotDisable, wantDisable) {
 		t.Fatalf("disable diff = %#v, want %#v", gotDisable, wantDisable)
+	}
+}
+
+func TestManageModelStartsAtFirstEnabledSkill(t *testing.T) {
+	m := NewManageModel(ManageOptions{
+		Skills:           testSkills(),
+		Target:           "codex",
+		Scope:            "project",
+		Mode:             "link",
+		InitiallyEnabled: []string{"coding/go-code-review"},
+	})
+	if m.Cursor != 1 {
+		t.Fatalf("cursor = %d, want first enabled skill index 1", m.Cursor)
 	}
 }
 

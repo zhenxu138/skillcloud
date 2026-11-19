@@ -163,10 +163,12 @@ The TUI opens a launcher menu. Move with Up/Down (or j/k), run an entry with Ent
 | `Space` | Toggle the current skill |
 | `/` | Search skills |
 | `Tab` | Cycle all/enabled/disabled/changed views |
+| `Home` / `End` | Jump to the first or last skill |
+| `PgUp` / `PgDn` | Move one page |
 | `Enter` | Review and apply changes |
 | `q` | Quit without saving |
 
-In Browse, checked skills are used for the current project. Unchecking an already used skill removes it from the project. In Add, press b on the source field to browse the filesystem for a skill directory.
+In Browse, checked skills are used for the current project. The list scrolls around the cursor, shows the skill's group/owner, and starts at the first enabled skill when one exists. Unchecking an already used skill removes it from the project. In Add, press b on the source field to browse the filesystem for a skill directory.
 
 Add a downloaded skill to your skills repository:
 

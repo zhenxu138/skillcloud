@@ -163,10 +163,12 @@ TUI 打开一个启动菜单。用上下方向键（或 j/k）移动，Enter 执
 | `Space` | 切换当前 skill |
 | `/` | 搜索 skills |
 | `Tab` | 切换全部/已使用/未使用/已变更视图 |
+| `Home` / `End` | 跳到第一个或最后一个 skill |
+| `PgUp` / `PgDn` | 翻一页 |
 | `Enter` | 查看摘要并应用变更 |
 | `q` | 不保存退出 |
 
-在 Browse 中，勾选的 skill 会在当前项目使用，取消勾选已使用的 skill 会从项目移除它。在 Add 中，在 source 字段按 b 可浏览文件系统选择 skill 目录。
+在 Browse 中，勾选的 skill 会在当前项目使用；列表会围绕光标滚动，显示 skill 所属的组/来源，并在存在已启用 skill 时从第一个已启用项开始。取消勾选已使用的 skill 会从项目移除它。在 Add 中，在 source 字段按 b 可浏览文件系统选择 skill 目录。
 
 将下载的 skill 添加到 skills 仓库：
 
