@@ -9,13 +9,21 @@ import (
 )
 
 type SkillRef struct {
-	ID string `yaml:"id"`
-	As string `yaml:"as"`
+	ID    string `yaml:"id"`
+	As    string `yaml:"as"`
+	Group string `yaml:"group,omitempty"`
+}
+
+type GroupRef struct {
+	ID       string `yaml:"id"`
+	Name     string `yaml:"name,omitempty"`
+	NoAgents bool   `yaml:"no_agents,omitempty"`
 }
 
 type TargetConfig struct {
 	Mode   string     `yaml:"mode"`
 	Skills []SkillRef `yaml:"skills"`
+	Groups []GroupRef `yaml:"groups,omitempty"`
 }
 
 type Config struct {
@@ -52,4 +60,3 @@ func Save(projectRoot string, cfg Config) error {
 	}
 	return os.WriteFile(ConfigPath(projectRoot), data, 0o644)
 }
-

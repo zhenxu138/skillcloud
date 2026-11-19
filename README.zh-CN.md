@@ -87,6 +87,7 @@ my-project/
 | 导入 | 用 `skillcloud add` 将本地已有 skill 目录加入 library。 |
 | 整理 | 用多级分类目录管理 skill，而不是全部放进一个大平铺目录。 |
 | 选择 | 支持启用单个 skill、多个 skill，或 `category/*` 整个分类。 |
+| 技能组 | 一次启用一组 skill，并管理对应的 `AGENTS.md` 规则。 |
 | TUI | 支持交互式浏览和选择 skill。 |
 | 投影 | 将选中的 skill 链接或复制到 agent 指定目录。 |
 | Agent | 内置 Codex、Claude Code、Hermes 的目标路径。 |
@@ -193,6 +194,44 @@ skillcloud push -m "add code review skill"
 
 普通用户不需要关心本地缓存；skillcloud 会在内部维护一份隐藏缓存，用来校验、索引和安全投影 skills。
 
+## 技能组
+
+技能组把任意一组 skill 和可选的 `AGENTS.md` 规则绑定在一起。skillcloud 会扫描 `groups/` 和 `skills/` 下的 `GROUP.yaml`，所以一个组可以混合使用不同分类里的 skill。
+
+```text
+groups/devops/
+  GROUP.yaml
+  AGENTS.md
+```
+
+```yaml
+name: devops
+title: 运维与网络诊断
+description: 服务器巡检、网络排查与远程调试。
+entry: ops/collect-env-info
+agents: AGENTS.md
+skills:
+  - id: ops/clash-uas-mac-troubleshoot
+  - id: ops/collect-env-info
+  - name: remote-debug-helper
+    as: remote-debug
+```
+
+- `skills` 可以写精确的 skill ID，也可以写唯一的 skill 名称；`as` 覆盖投影后的目录名。
+- 如果省略 `skills` 且 `GROUP.yaml` 位于 `skills/` 下，组会自动包含该目录下的全部 skill。
+- `agents` 指向一个 Markdown 文件。启用组时，它的内容会写入项目 `AGENTS.md` 的托管区块；移除组时只删除这个区块。
+- 技能组只支持项目作用域。`.skillcloud.yaml` 会记录组，并给组新增的 skill 打上 `group` 标记；移除组不会删掉之前手动启用的同名 skill。
+- `--no-agents` 会记录组但不写入规则；后续 `apply` 也会保持抑制状态。
+
+```bash
+skillcloud group list
+skillcloud group show devops
+skillcloud group use devops --target codex --mode link
+skillcloud group remove devops
+```
+
+`skillcloud apply` 会重新应用已配置的 skill，并刷新每个组的 `AGENTS.md` 托管区块。
+
 ## Skill 格式
 
 每个 skill 都是一个包含 `SKILL.md` 的目录。
@@ -241,10 +280,16 @@ targets:
         as: "code-review"
       - id: "stock/risk-control"
         as: "risk-control"
+        group: "groups/devops"
+    groups:
+      - id: "groups/devops"
+        name: "devops"
 ```
 
 - `id` 是 skills 仓库里的分类路径。
 - `as` 是投影到 agent 目录后的平铺目录名。
+- `group` 标记由 `skillcloud group use` 添加的 skill。
+- `groups` 记录当前启用的组，以及需要维护的 `AGENTS.md` 规则。
 
 ## 命令
 
@@ -263,6 +308,10 @@ skillcloud use <skill-id...> --target codex --scope project
 skillcloud use coding/* --target claude --scope project
 skillcloud use --select --target hermes --scope global
 skillcloud unuse <alias-or-skill-id...>
+skillcloud group list
+skillcloud group show <group>
+skillcloud group use <group> --target codex --mode link
+skillcloud group remove <group>
 skillcloud apply
 
 # 兼容别名

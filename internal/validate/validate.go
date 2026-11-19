@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/skillcloud/skillcloud/internal/group"
 	"github.com/skillcloud/skillcloud/internal/skill"
 )
 
@@ -35,6 +36,15 @@ func Repo(repoDir string) []error {
 			}
 		}
 	}
+	groups, err := group.Discover(repoDir, skills)
+	if err != nil {
+		errs = append(errs, err)
+		return errs
+	}
+	for _, g := range groups {
+		if len(g.Members) == 0 && g.AgentsPath == "" {
+			errs = append(errs, fmt.Errorf("group %s has no skills and no AGENTS.md", g.ID))
+		}
+	}
 	return errs
 }
-

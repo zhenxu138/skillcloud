@@ -18,7 +18,7 @@ func TestRootCommandHasExpectedSubcommands(t *testing.T) {
 		names[sub.Name()] = true
 	}
 
-	for _, want := range []string{"init", "pull", "push", "status", "list", "search", "browse", "enable", "disable", "apply", "doctor", "validate"} {
+	for _, want := range []string{"init", "pull", "push", "status", "list", "search", "browse", "enable", "disable", "group", "apply", "doctor", "validate"} {
 		if !names[want] {
 			t.Fatalf("missing subcommand %q", want)
 		}

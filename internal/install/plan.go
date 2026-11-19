@@ -51,6 +51,7 @@ func PlanEnable(skills []skill.Skill, targetName string, scope string, mode stri
 
 		ref := project.SkillRef{ID: s.ID, As: alias}
 		if i, ok := idIndex[s.ID]; ok {
+			ref.Group = refs[i].Group
 			refs[i] = ref
 		} else {
 			idIndex[s.ID] = len(refs)
@@ -76,4 +77,3 @@ func PlanEnable(skills []skill.Skill, targetName string, scope string, mode stri
 	cfg.Targets[targetName] = targetConfig
 	return Plan{Actions: actions, ProjectConfig: cfg}, nil
 }
-

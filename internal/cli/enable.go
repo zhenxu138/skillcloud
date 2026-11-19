@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/skillcloud/skillcloud/internal/config"
+	"github.com/skillcloud/skillcloud/internal/group"
 	"github.com/skillcloud/skillcloud/internal/install"
 	"github.com/skillcloud/skillcloud/internal/project"
 	"github.com/skillcloud/skillcloud/internal/skill"
@@ -91,6 +92,9 @@ func runEnableWithConfig(cmd *cobra.Command, selected []skill.Skill, globalConfi
 	}
 	plan, err := install.PlanEnable(selected, targetName, scope, mode, destRoot, projectConfig)
 	if err != nil {
+		return err
+	}
+	if err := install.CheckReplace(plan.Actions); err != nil {
 		return err
 	}
 	if err := install.Execute(plan.Actions); err != nil {
@@ -254,6 +258,10 @@ func newApplyCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			groups, err := group.Discover(repoDir, index.Skills)
+			if err != nil {
+				return err
+			}
 			byID := map[string]skill.Skill{}
 			for _, s := range index.Skills {
 				byID[s.ID] = s
@@ -277,9 +285,15 @@ func newApplyCommand() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				if err := install.CheckReplace(plan.Actions); err != nil {
+					return err
+				}
 				if err := install.Execute(plan.Actions); err != nil {
 					return err
 				}
+			}
+			if err := refreshGroupAgents(root, projectConfig, groups); err != nil {
+				return err
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), "applied project skills")
 			return nil

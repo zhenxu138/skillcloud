@@ -87,6 +87,7 @@ my-project/
 | Import | Add existing local skill directories to your library with `skillcloud add`. |
 | Organization | Keep skills in nested categories instead of one flat folder. |
 | Selection | Enable explicit skills, many skills, or `category/*`. |
+| Groups | Enable a named set of skills and its managed `AGENTS.md` rules. |
 | TUI | Browse and select skills interactively. |
 | Projection | Link or copy selected skills into agent-specific directories. |
 | Agents | Built-in target paths for Codex, Claude Code, and Hermes. |
@@ -191,6 +192,44 @@ Push changes made inside the local skills cache:
 skillcloud push -m "add code review skill"
 ```
 
+## Skill Groups
+
+A group bundles any set of skills with optional `AGENTS.md` rules. Groups are discovered from `GROUP.yaml` files under `groups/` or `skills/`, so a group can reuse skills from different categories.
+
+```text
+groups/devops/
+  GROUP.yaml
+  AGENTS.md
+```
+
+```yaml
+name: devops
+title: DevOps
+description: Server inspection, network diagnosis, and remote debugging.
+entry: ops/collect-env-info
+agents: AGENTS.md
+skills:
+  - id: ops/clash-uas-mac-troubleshoot
+  - id: ops/collect-env-info
+  - name: remote-debug-helper
+    as: remote-debug
+```
+
+- `skills` accepts exact skill IDs or unique skill names. `as` overrides the projected directory name.
+- If `skills` is omitted and `GROUP.yaml` is inside `skills/`, every skill under that directory is included.
+- `agents` points to a Markdown file. Its content is written into the project `AGENTS.md` inside a managed block, and removed when the group is removed.
+- Group enablement is project scope. `.skillcloud.yaml` records the group and tags the skills it added, so removing the group does not remove skills that were already enabled manually.
+- `--no-agents` records the group while suppressing its rules; later `apply` runs keep them suppressed.
+
+```bash
+skillcloud group list
+skillcloud group show devops
+skillcloud group use devops --target codex --mode link
+skillcloud group remove devops
+```
+
+`skillcloud apply` re-applies the configured skills and refreshes every group's managed `AGENTS.md` block.
+
 ## Skill Format
 
 Each skill is a folder containing `SKILL.md`.
@@ -239,10 +278,16 @@ targets:
         as: "code-review"
       - id: "stock/risk-control"
         as: "risk-control"
+        group: "groups/devops"
+    groups:
+      - id: "groups/devops"
+        name: "devops"
 ```
 
 - `id` is the categorized path in your skills repository.
 - `as` is the flat directory name created for the agent.
+- `group` marks a skill added by `skillcloud group use`.
+- `groups` records the enabled groups whose `AGENTS.md` rules are managed.
 
 ## Commands
 
@@ -261,6 +306,10 @@ skillcloud use <skill-id...> --target codex --scope project
 skillcloud use coding/* --target claude --scope project
 skillcloud use --select --target hermes --scope global
 skillcloud unuse <alias-or-skill-id...>
+skillcloud group list
+skillcloud group show <group>
+skillcloud group use <group> --target codex --mode link
+skillcloud group remove <group>
 skillcloud apply
 
 # compatibility aliases
