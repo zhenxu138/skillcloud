@@ -68,6 +68,7 @@ func TestGroupUseAndRemove(t *testing.T) {
 	writeTestSkill(t, repo, filepath.Join("skills", "ops", "bar"), "bar", "Bar skill.")
 	writeGroupFile(t, repo, "groups/devops/GROUP.yaml", `name: devops
 title: DevOps
+description: Mixed custom group.
 entry: ops/foo
 agents: AGENTS.md
 skills:
@@ -125,7 +126,7 @@ skills:
 	if err != nil {
 		t.Fatalf("group list error = %v", err)
 	}
-	if !strings.Contains(listOut, "groups/devops") || !strings.Contains(listOut, "codex") {
+	if !strings.Contains(listOut, "devops") || !strings.Contains(listOut, "codex") || !strings.Contains(listOut, "Mixed custom group.") {
 		t.Fatalf("list output = %q", listOut)
 	}
 	showOut, err := runCLI(t, "group", "show", "devops")

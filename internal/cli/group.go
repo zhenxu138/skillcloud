@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/skillcloud/skillcloud/internal/agents"
 	"github.com/skillcloud/skillcloud/internal/group"
@@ -83,19 +84,20 @@ func newGroupListCommand() *cobra.Command {
 				sort.Strings(enabled[id])
 			}
 
-			fmt.Fprintln(cmd.OutOrStdout(), "ID\tNAME\tSKILLS\tENTRY\tAGENTS\tENABLED")
+			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
+			fmt.Fprintln(w, "GROUP\tSKILLS\tENABLED\t工作流 / 擅长")
 			for _, g := range groups {
-				agentsLabel := "-"
-				if g.AgentsPath != "" {
-					agentsLabel = "yes"
+				description := g.Description
+				if description == "" {
+					description = "-"
 				}
 				enabledLabel := "-"
 				if targets := enabled[g.ID]; len(targets) > 0 {
 					enabledLabel = strings.Join(targets, ",")
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\t%d\t%s\t%s\t%s\n", g.ID, g.Name, len(g.Members), g.Entry, agentsLabel, enabledLabel)
+				fmt.Fprintf(w, "%s\t%d\t%s\t%s\n", g.Name, len(g.Members), enabledLabel, description)
 			}
-			printListFooter(cmd, fmt.Sprintf("(๑•̀ㅂ•́)و✧ 共 %d 个组。用 `skillcloud group show <组名>` 看成员，`skillcloud group use <组名>` 一次加载技能和规则。", len(groups)))
+			w.Flush()
 			return nil
 		},
 	}

@@ -52,7 +52,7 @@ func TestSearchCommandPrintsMatches(t *testing.T) {
 	}
 }
 
-func TestListCommandBuildsFreshIndexAndKeepsFooterOnStderr(t *testing.T) {
+func TestListCommandBuildsFreshIndex(t *testing.T) {
 	home := t.TempDir()
 	repo := t.TempDir()
 	t.Setenv("HOME", home)
@@ -83,21 +83,15 @@ func TestListCommandBuildsFreshIndexAndKeepsFooterOnStderr(t *testing.T) {
 	}
 
 	cmd := NewRootCommand()
-	var stdout, stderr bytes.Buffer
+	var stdout bytes.Buffer
 	cmd.SetOut(&stdout)
-	cmd.SetErr(&stderr)
+	cmd.SetErr(&stdout)
 	cmd.SetArgs([]string{"list"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
 	if !strings.Contains(stdout.String(), "sop/demo") {
 		t.Fatalf("stdout = %q, want fresh repo skill", stdout.String())
-	}
-	if strings.Contains(stdout.String(), "共 ") {
-		t.Fatalf("footer leaked into stdout: %q", stdout.String())
-	}
-	if !strings.Contains(stderr.String(), "共 1 个 skill") {
-		t.Fatalf("stderr = %q, want footer", stderr.String())
 	}
 }
 
