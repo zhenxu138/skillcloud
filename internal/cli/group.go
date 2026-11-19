@@ -95,6 +95,7 @@ func newGroupListCommand() *cobra.Command {
 				}
 				fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\t%d\t%s\t%s\t%s\n", g.ID, g.Name, len(g.Members), g.Entry, agentsLabel, enabledLabel)
 			}
+			printListFooter(cmd, fmt.Sprintf("(๑•̀ㅂ•́)و✧ 共 %d 个组。用 `skillcloud group show <组名>` 看成员，`skillcloud group use <组名>` 一次加载技能和规则。", len(groups)))
 			return nil
 		},
 	}
