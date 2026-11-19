@@ -281,6 +281,55 @@ skills:
 	}
 }
 
+func TestGroupRemoveDefaultsToCodex(t *testing.T) {
+	repo, projectRoot := setupGroupProject(t)
+	writeTestSkill(t, repo, filepath.Join("skills", "ops", "foo"), "foo", "Foo skill.")
+	writeGroupFile(t, repo, "groups/demo/GROUP.yaml", `name: demo
+agents: AGENTS.md
+skills:
+  - id: ops/foo
+`)
+	writeGroupFile(t, repo, "groups/demo/AGENTS.md", "Demo rule.\n")
+	for _, target := range []string{"codex", "claude"} {
+		if _, err := runCLI(t, "group", "use", "demo", "--target", target, "--mode", "copy"); err != nil {
+			t.Fatalf("group use %s: %v", target, err)
+		}
+	}
+
+	if _, err := runCLI(t, "group", "remove", "demo"); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := project.Load(projectRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Targets["codex"].Skills) != 0 || len(cfg.Targets["codex"].Groups) != 0 {
+		t.Fatalf("codex config = %#v", cfg.Targets["codex"])
+	}
+	if len(cfg.Targets["claude"].Skills) != 1 || len(cfg.Targets["claude"].Groups) != 1 {
+		t.Fatalf("claude config = %#v", cfg.Targets["claude"])
+	}
+	agents, _ := os.ReadFile(filepath.Join(projectRoot, "AGENTS.md"))
+	if !strings.Contains(string(agents), "Demo rule.") {
+		t.Fatalf("rules should remain while another target uses the group:\n%s", string(agents))
+	}
+
+	if _, err := runCLI(t, "group", "remove", "demo", "--target", "claude"); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err = project.Load(projectRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Targets["claude"].Skills) != 0 || len(cfg.Targets["claude"].Groups) != 0 {
+		t.Fatalf("claude config = %#v", cfg.Targets["claude"])
+	}
+	agents, _ = os.ReadFile(filepath.Join(projectRoot, "AGENTS.md"))
+	if strings.Contains(string(agents), "Demo rule.") {
+		t.Fatalf("rules should be removed after the last target:\n%s", string(agents))
+	}
+}
+
 func TestApplyRefreshesGroupAgents(t *testing.T) {
 	repo, projectRoot := setupGroupProject(t)
 	writeTestSkill(t, repo, filepath.Join("skills", "ops", "foo"), "foo", "Foo skill.")

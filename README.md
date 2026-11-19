@@ -192,6 +192,8 @@ Push changes made inside the local skills cache:
 skillcloud push -m "add code review skill"
 ```
 
+Commands that accept a target or mode default to `codex`, project scope, and `link` mode.
+
 ## Skill Groups
 
 A group bundles any set of skills with optional `AGENTS.md` rules. Groups are discovered from `GROUP.yaml` files under `groups/` or `skills/`, so a group can reuse skills from different categories.
@@ -311,11 +313,11 @@ skillcloud add <path> --as <skill-id>
 skillcloud use <skill-id...> --target codex --scope project
 skillcloud use coding/* --target claude --scope project
 skillcloud use --select --target hermes --scope global
-skillcloud unuse <alias-or-skill-id...>
+skillcloud unuse <alias-or-skill-id...> --target codex
 skillcloud group list
 skillcloud group show <group>
 skillcloud group use <group> --target codex --mode link
-skillcloud group remove <group>
+skillcloud group remove <group> --target codex
 skillcloud apply
 
 # compatibility aliases

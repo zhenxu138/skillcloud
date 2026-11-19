@@ -156,7 +156,7 @@ func TestDisableRefusesUnmanagedProjection(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, removed, err := disableProjectSkills(projectRoot, cfg, projectConfig, []string{"coding/code-review"})
+	_, removed, err := disableProjectSkills(projectRoot, cfg, projectConfig, []string{"coding/code-review"}, "")
 	if err == nil {
 		t.Fatal("expected unmanaged projection error")
 	}

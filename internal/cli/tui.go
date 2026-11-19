@@ -145,7 +145,7 @@ func manageSkillFlow(targetName, scope, mode string, initialView int) (string, e
 
 	if len(toDisable) > 0 {
 		var removed int
-		projectConfig, removed, err = disableProjectSkills(root, globalConfig, projectConfig, toDisable)
+		projectConfig, removed, err = disableProjectSkills(root, globalConfig, projectConfig, toDisable, targetName)
 		if err != nil {
 			return "", err
 		}

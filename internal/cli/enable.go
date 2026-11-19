@@ -167,7 +167,8 @@ func runSelectEnable(cmd *cobra.Command, targetName string, scope string, mode s
 }
 
 func newDisableCommand() *cobra.Command {
-	return &cobra.Command{
+	var targetName string
+	cmd := &cobra.Command{
 		Use:   "disable <alias-or-skill-id...>",
 		Short: "Disable one or more projected skills from the current project",
 		Args:  cobra.MinimumNArgs(1),
@@ -185,7 +186,7 @@ func newDisableCommand() *cobra.Command {
 				return err
 			}
 
-			projectConfig, removed, err := disableProjectSkills(root, globalConfig, projectConfig, args)
+			projectConfig, removed, err := disableProjectSkills(root, globalConfig, projectConfig, args, targetName)
 			if err != nil {
 				return err
 			}
@@ -196,16 +197,26 @@ func newDisableCommand() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&targetName, "target", "codex", "target agent: codex, claude, hermes")
+	return cmd
 }
 
-func disableProjectSkills(root string, globalConfig config.Config, projectConfig project.Config, idsOrAliases []string) (project.Config, int, error) {
+func disableProjectSkills(root string, globalConfig config.Config, projectConfig project.Config, idsOrAliases []string, targetFilter string) (project.Config, int, error) {
 	remove := map[string]bool{}
 	for _, arg := range idsOrAliases {
 		remove[arg] = true
 	}
+	if targetFilter != "" {
+		if _, ok := projectConfig.Targets[targetFilter]; !ok {
+			return project.Config{}, 0, fmt.Errorf("target %q is not configured in this project", targetFilter)
+		}
+	}
 
 	removed := 0
 	for targetName, targetConfig := range projectConfig.Targets {
+		if targetFilter != "" && targetName != targetFilter {
+			continue
+		}
 		destRoot, err := targetDestRoot(globalConfig, targetName, "project", root)
 		if err != nil {
 			return project.Config{}, removed, err

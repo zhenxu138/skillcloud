@@ -314,7 +314,15 @@ func newGroupRemoveCommand() *cobra.Command {
 			if err := project.Save(root, projectConfig); err != nil {
 				return err
 			}
-			if !keepAgents {
+			stillEnabled := false
+			for _, targetConfig := range projectConfig.Targets {
+				for _, groupRef := range targetConfig.Groups {
+					if groupRef.ID == g.ID {
+						stillEnabled = true
+					}
+				}
+			}
+			if !keepAgents && !stillEnabled {
 				if err := agents.Remove(filepath.Join(root, "AGENTS.md"), g.ID); err != nil {
 					return err
 				}
@@ -323,7 +331,7 @@ func newGroupRemoveCommand() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&targetName, "target", "", "only remove from this target (default: all targets)")
+	cmd.Flags().StringVar(&targetName, "target", "codex", "target agent: codex, claude, hermes")
 	cmd.Flags().BoolVar(&keepAgents, "keep-agents", false, "keep the group's AGENTS.md block")
 	return cmd
 }

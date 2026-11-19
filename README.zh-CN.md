@@ -192,6 +192,8 @@ skillcloud unuse coding/code-review
 skillcloud push -m "add code review skill"
 ```
 
+接受 target 或 mode 的命令默认使用 `codex`、项目作用域和 `link` 安装模式。
+
 普通用户不需要关心本地缓存；skillcloud 会在内部维护一份隐藏缓存，用来校验、索引和安全投影 skills。
 
 ## 技能组
@@ -313,11 +315,11 @@ skillcloud add <path> --as <skill-id>
 skillcloud use <skill-id...> --target codex --scope project
 skillcloud use coding/* --target claude --scope project
 skillcloud use --select --target hermes --scope global
-skillcloud unuse <alias-or-skill-id...>
+skillcloud unuse <alias-or-skill-id...> --target codex
 skillcloud group list
 skillcloud group show <group>
 skillcloud group use <group> --target codex --mode link
-skillcloud group remove <group>
+skillcloud group remove <group> --target codex
 skillcloud apply
 
 # 兼容别名
