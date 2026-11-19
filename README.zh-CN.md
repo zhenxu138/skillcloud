@@ -232,6 +232,9 @@ skillcloud group remove devops
 ```
 
 `skillcloud apply` 会重新应用已配置的 skill，并刷新每个组的 `AGENTS.md` 托管区块。
+用 `skillcloud current` 查看当前项目实际启用的 skill 和组。
+
+加载前可以用 `skillcloud group show <组>` 查看成员。要取消整个组，使用 `skillcloud group remove <组>`：它会删除该组的投影、配置记录和 `AGENTS.md` 托管区块。只取消单个 skill 用 `skillcloud unuse <别名或ID>`；如果该 skill 属于某个组，优先用 `group remove`，这样组记录和规则也会一起清理。
 
 ## Skill 格式
 
@@ -302,6 +305,7 @@ skillcloud status
 
 skillcloud list
 skillcloud search <query>
+skillcloud current            # 当前项目启用的 skill 和组
 skillcloud                    # 启动主 TUI
 
 skillcloud add <path> --as <skill-id>

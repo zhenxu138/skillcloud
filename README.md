@@ -230,6 +230,9 @@ skillcloud group remove devops
 ```
 
 `skillcloud apply` re-applies the configured skills and refreshes every group's managed `AGENTS.md` block.
+Use `skillcloud current` to see the exact skills and groups enabled in the current project.
+
+To inspect a group before loading it, use `skillcloud group show <group>`. To unload a whole group, use `skillcloud group remove <group>`; this removes its projections, its config record, and its managed `AGENTS.md` block. To remove one skill, use `skillcloud unuse <alias-or-id>`; for a group-owned skill, prefer `group remove` so the group record and rules are cleaned up too.
 
 ## Skill Format
 
@@ -300,6 +303,7 @@ skillcloud status
 
 skillcloud list
 skillcloud search <query>
+skillcloud current            # skills and groups enabled here
 skillcloud                    # launch main TUI
 
 skillcloud add <path> --as <skill-id>
