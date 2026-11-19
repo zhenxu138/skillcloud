@@ -151,6 +151,7 @@ The TUI opens a launcher menu. Move with Up/Down (or j/k), run an entry with Ent
 | Entry | What it does |
 | --- | --- |
 | Browse | Select skills for the current project interactively |
+| Groups | Load or remove whole skill groups and their `AGENTS.md` rules |
 | Enabled | Review and disable enabled skills for the current project |
 | Add | Import a local skill directory into the library |
 | Changes | Show library repo changes and project projection drift |

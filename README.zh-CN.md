@@ -151,6 +151,7 @@ TUI 打开一个启动菜单。用上下方向键（或 j/k）移动，Enter 执
 | 菜单项 | 功能 |
 | --- | --- |
 | Browse | 交互式选择当前项目要启用的 skill |
+| Groups | 加载或移除整个技能组及其 `AGENTS.md` 规则 |
 | Enabled | 查看并取消当前项目已启用的 skill |
 | Add | 将本地 skill 目录导入到 library |
 | Changes | 显示 library 仓库改动和项目投影漂移 |

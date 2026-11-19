@@ -23,6 +23,7 @@ type AppAction int
 const (
 	ActionQuit AppAction = iota
 	ActionBrowse
+	ActionGroups
 	ActionEnabled
 	ActionAdd
 	ActionChanges
@@ -31,10 +32,11 @@ const (
 	ActionSettings
 )
 
-var appViews = []string{"Browse", "Enabled", "Add", "Changes", "Sync", "Push", "Settings"}
+var appViews = []string{"Browse", "Groups", "Enabled", "Add", "Changes", "Sync", "Push", "Settings"}
 
 var appDescriptions = []string{
 	"Choose skills for this project",
+	"Load or remove whole SOP groups",
 	"Review and remove enabled skills",
 	"Import a local skill directory",
 	"Show repo changes and projection drift",
@@ -45,6 +47,7 @@ var appDescriptions = []string{
 
 var appActions = []AppAction{
 	ActionBrowse,
+	ActionGroups,
 	ActionEnabled,
 	ActionAdd,
 	ActionChanges,

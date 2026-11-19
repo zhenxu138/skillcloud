@@ -19,8 +19,8 @@ func TestAppModelTabCyclesViews(t *testing.T) {
 	m := NewAppModel(AppOptions{Target: "codex", Scope: "project"})
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
 	got := updated.(AppModel)
-	if got.ViewName() != "Enabled" {
-		t.Fatalf("ViewName() = %q, want Enabled", got.ViewName())
+	if got.ViewName() != "Groups" {
+		t.Fatalf("ViewName() = %q, want Groups", got.ViewName())
 	}
 }
 
@@ -31,8 +31,8 @@ func TestAppModelDownAdvancesCursorAndClamps(t *testing.T) {
 	}
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
 	m = updated.(AppModel)
-	if got := m.ViewName(); got != "Enabled" {
-		t.Fatalf("after one down view = %q, want Enabled", got)
+	if got := m.ViewName(); got != "Groups" {
+		t.Fatalf("after one down view = %q, want Groups", got)
 	}
 	for i := 0; i < 10; i++ {
 		updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
@@ -49,13 +49,13 @@ func TestAppModelUpMovesCursorUpAndClamps(t *testing.T) {
 		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
 		m = updated.(AppModel)
 	}
-	if got := m.ViewName(); got != "Changes" {
-		t.Fatalf("view = %q, want Changes", got)
+	if got := m.ViewName(); got != "Add" {
+		t.Fatalf("view = %q, want Add", got)
 	}
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyUp})
 	m = updated.(AppModel)
-	if got := m.ViewName(); got != "Add" {
-		t.Fatalf("after up view = %q, want Add", got)
+	if got := m.ViewName(); got != "Enabled" {
+		t.Fatalf("after up view = %q, want Enabled", got)
 	}
 	for i := 0; i < 10; i++ {
 		updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
@@ -68,14 +68,29 @@ func TestAppModelUpMovesCursorUpAndClamps(t *testing.T) {
 
 func TestAppModelEnterRecordsChosenAction(t *testing.T) {
 	m := NewAppModel(AppOptions{Target: "codex", Scope: "project"})
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	m = updated.(AppModel)
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	m = updated.(AppModel)
+	var updated tea.Model
+	for i := 0; i < 3; i++ {
+		updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+		m = updated.(AppModel)
+	}
 	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = updated.(AppModel)
 	if m.chosen != ActionAdd {
 		t.Fatalf("chosen = %v, want ActionAdd", m.chosen)
+	}
+}
+
+func TestAppModelGroupsAction(t *testing.T) {
+	m := NewAppModel(AppOptions{Target: "codex", Scope: "project"})
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m = updated.(AppModel)
+	if got := m.ViewName(); got != "Groups" {
+		t.Fatalf("view = %q, want Groups", got)
+	}
+	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(AppModel)
+	if m.chosen != ActionGroups {
+		t.Fatalf("chosen = %v, want ActionGroups", m.chosen)
 	}
 }
 
@@ -99,8 +114,8 @@ func TestAppModelEscQuits(t *testing.T) {
 
 func TestAppModelIncludesPushView(t *testing.T) {
 	m := NewAppModel(AppOptions{Target: "codex", Scope: "project"})
-	// Navigate to Push: Browse(0) -> Enabled(1) -> Add(2) -> Changes(3) -> Sync(4) -> Push(5)
-	for i := 0; i < 5; i++ {
+	// Navigate to Push: Browse(0) -> Groups(1) -> Enabled(2) -> Add(3) -> Changes(4) -> Sync(5) -> Push(6)
+	for i := 0; i < 6; i++ {
 		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
 		m = updated.(AppModel)
 	}

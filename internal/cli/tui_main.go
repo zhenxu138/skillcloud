@@ -20,6 +20,8 @@ var runMainTUI = func(cmd *cobra.Command, opts tui.AppOptions) error {
 			return nil
 		case tui.ActionBrowse:
 			status, err = manageSkillFlow(opts.Target, opts.Scope, opts.Mode, 0)
+		case tui.ActionGroups:
+			status, err = manageGroupFlow(opts.Target, opts.Scope, opts.Mode)
 		case tui.ActionEnabled:
 			status, err = manageFlow(opts.Target, opts.Scope, opts.Mode, tui.ViewEnabled())
 		case tui.ActionAdd:

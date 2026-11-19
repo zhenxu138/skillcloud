@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/skillcloud/skillcloud/internal/config"
+	"github.com/skillcloud/skillcloud/internal/group"
 	"github.com/skillcloud/skillcloud/internal/install"
 	"github.com/skillcloud/skillcloud/internal/library"
 	"github.com/skillcloud/skillcloud/internal/project"
@@ -16,6 +17,7 @@ import (
 )
 
 var runBrowseTUI = tui.Manage
+var runGroupTUI = tui.ManageGroups
 
 func newBrowseCommand() *cobra.Command {
 	var targetName string
@@ -85,6 +87,91 @@ func runBrowse(cmd *cobra.Command, targetName string, scope string, mode string)
 // quickly review and disable what they no longer need.
 func manageFlow(targetName, scope, mode string, initialView int) (string, error) {
 	return manageSkillFlow(targetName, scope, mode, initialView)
+}
+
+func manageGroupFlow(targetName, scope, mode string) (string, error) {
+	if scope != "project" {
+		return "", fmt.Errorf("group management currently supports project scope only")
+	}
+	if mode != "link" && mode != "copy" {
+		return "", fmt.Errorf("unknown mode %q", mode)
+	}
+
+	groups, _, _, err := loadGroups()
+	if err != nil {
+		return "", err
+	}
+	if len(groups) == 0 {
+		return "no groups found", nil
+	}
+	root, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	projectConfig, err := project.Load(root)
+	if err != nil {
+		return "", err
+	}
+
+	options := make([]tui.GroupOption, 0, len(groups))
+	byID := make(map[string]group.Group, len(groups))
+	for _, g := range groups {
+		description := g.Description
+		if description == "" {
+			description = g.Title
+		}
+		options = append(options, tui.GroupOption{
+			ID:          g.ID,
+			Name:        g.Name,
+			Title:       g.Title,
+			Description: description,
+			SkillCount:  len(g.Members),
+			HasAgents:   g.AgentsPath != "",
+		})
+		byID[g.ID] = g
+	}
+	enabled := make([]string, 0, len(projectConfig.Targets[targetName].Groups))
+	for _, ref := range projectConfig.Targets[targetName].Groups {
+		enabled = append(enabled, ref.ID)
+	}
+
+	result, err := runGroupTUI(tui.GroupOptions{
+		Groups:           options,
+		Target:           targetName,
+		Scope:            scope,
+		Mode:             mode,
+		InitiallyEnabled: enabled,
+	})
+	if err != nil {
+		return "", err
+	}
+	if !result.Apply {
+		return "groups canceled", nil
+	}
+	toEnable, toDisable := diffBrowseSelection(result.InitialIDs, result.SelectedIDs)
+	if len(toEnable) == 0 && len(toDisable) == 0 {
+		return "no group changes", nil
+	}
+
+	for _, id := range toDisable {
+		g, ok := byID[id]
+		if !ok {
+			return "", fmt.Errorf("group %q disappeared from repository", id)
+		}
+		if _, err := applyGroupRemove(root, g, targetName, false); err != nil {
+			return "", err
+		}
+	}
+	for _, id := range toEnable {
+		g, ok := byID[id]
+		if !ok {
+			return "", fmt.Errorf("group %q disappeared from repository", id)
+		}
+		if _, err := applyGroupUse(root, g, targetName, mode, false); err != nil {
+			return "", err
+		}
+	}
+	return fmt.Sprintf("applied group changes: enabled %d, disabled %d", len(toEnable), len(toDisable)), nil
 }
 
 // manageSkillFlow runs the interactive skill manager and applies the resulting
