@@ -10,9 +10,9 @@ import (
 
 func testGroups() []GroupOption {
 	return []GroupOption{
-		{ID: "groups/matt", Name: "matt", Title: "Matt", Description: "单人小项目", SkillCount: 31, HasAgents: true},
-		{ID: "groups/devops", Name: "devops", Title: "DevOps", Description: "运维与网络诊断", SkillCount: 6, HasAgents: true},
-		{ID: "groups/empty", Name: "empty", Title: "Empty", SkillCount: 0},
+		{ID: "groups/matt", Name: "matt", Category: "SOP", Title: "Matt", Description: "单人小项目", SkillCount: 31, HasAgents: true},
+		{ID: "groups/devops", Name: "devops", Category: "自定义组", Title: "DevOps", Description: "运维与网络诊断", SkillCount: 6, HasAgents: true},
+		{ID: "groups/empty", Name: "empty", Category: "自定义组", Title: "Empty", SkillCount: 0},
 	}
 }
 
@@ -71,7 +71,7 @@ func TestGroupModelSearchMatchesDescription(t *testing.T) {
 func TestGroupModelViewShowsRowsAndRules(t *testing.T) {
 	m := NewGroupModel(GroupOptions{Groups: testGroups(), Target: "codex", Scope: "project", Mode: "link"})
 	view := m.View()
-	for _, want := range []string{"skillcloud · groups · codex · link", "matt", "31 skills", "rules", "Pending:"} {
+	for _, want := range []string{"skillcloud · groups · codex · link", "matt", "SOP", "31 skills", "rules", "Pending:"} {
 		if !strings.Contains(view, want) {
 			t.Fatalf("missing %q in:\n%s", want, view)
 		}

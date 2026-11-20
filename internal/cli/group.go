@@ -41,7 +41,7 @@ func newGroupShowCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "id: %s\nname: %s\ntitle: %s\n", g.ID, g.Name, groupTitle(g))
+			fmt.Fprintf(cmd.OutOrStdout(), "id: %s\nname: %s\ncategory: %s\ntitle: %s\n", g.ID, g.Name, g.Category, groupTitle(g))
 			if g.Description != "" {
 				fmt.Fprintf(cmd.OutOrStdout(), "description: %s\n", g.Description)
 			}
@@ -83,18 +83,46 @@ func newGroupListCommand() *cobra.Command {
 				sort.Strings(enabled[id])
 			}
 
-			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "GROUP\tSKILLS\tENABLED\t工作流 / 擅长")
+			byCategory := map[string][]group.Group{}
 			for _, g := range groups {
-				description := g.Description
-				if description == "" {
-					description = "-"
+				byCategory[g.Category] = append(byCategory[g.Category], g)
+			}
+			categoryOrder := []string{"SOP", "个人学习", "自定义组", "其他"}
+			var categories []string
+			seenCategory := map[string]bool{}
+			for _, category := range categoryOrder {
+				if len(byCategory[category]) > 0 {
+					categories = append(categories, category)
+					seenCategory[category] = true
 				}
-				enabledLabel := "-"
-				if targets := enabled[g.ID]; len(targets) > 0 {
-					enabledLabel = strings.Join(targets, ",")
+			}
+			var extra []string
+			for category := range byCategory {
+				if !seenCategory[category] {
+					extra = append(extra, category)
 				}
-				fmt.Fprintf(w, "%s\t%d\t%s\t%s\n", g.Name, len(g.Members), enabledLabel, description)
+			}
+			sort.Strings(extra)
+			categories = append(categories, extra...)
+
+			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
+			for i, category := range categories {
+				if i > 0 {
+					fmt.Fprintln(w)
+				}
+				fmt.Fprintf(w, "%s\n", category)
+				fmt.Fprintln(w, "GROUP\tSKILLS\tENABLED\t工作流 / 擅长")
+				for _, g := range byCategory[category] {
+					description := g.Description
+					if description == "" {
+						description = "-"
+					}
+					enabledLabel := "-"
+					if targets := enabled[g.ID]; len(targets) > 0 {
+						enabledLabel = strings.Join(targets, ",")
+					}
+					fmt.Fprintf(w, "%s\t%d\t%s\t%s\n", g.Name, len(g.Members), enabledLabel, description)
+				}
 			}
 			w.Flush()
 			return nil

@@ -12,6 +12,7 @@ import (
 type GroupOption struct {
 	ID          string
 	Name        string
+	Category    string
 	Title       string
 	Description string
 	SkillCount  int
@@ -223,14 +224,15 @@ func (m GroupModel) listView() string {
 			if m.Selected[g.ID] {
 				checked = tuiEnabled.Render("[x]")
 			}
-			name := padRight(g.Name, 16)
-			skillCount := padRight(fmt.Sprintf("%d skills", g.SkillCount), 10)
+			name := padDisplay(g.Name, 16)
+			category := padDisplay(g.Category, 10)
+			skillCount := padDisplay(fmt.Sprintf("%d skills", g.SkillCount), 10)
 			rules := "rules"
 			if !g.HasAgents {
 				rules = "no rules"
 			}
-			rules = padRight(rules, 8)
-			descWidth := m.Width - 44
+			rules = padDisplay(rules, 8)
+			descWidth := m.Width - 54
 			if descWidth < 12 {
 				descWidth = 12
 			}
@@ -238,8 +240,8 @@ func (m GroupModel) listView() string {
 			if description == "" {
 				description = g.Title
 			}
-			description = truncateRunes(description, descWidth)
-			fmt.Fprintf(&b, "%s %s %s %s %s %s\n", cursor, checked, name, skillCount, rules, tuiDim.Render(description))
+			description = lipgloss.NewStyle().MaxWidth(descWidth).Render(description)
+			fmt.Fprintf(&b, "%s %s %s %s %s %s %s\n", cursor, checked, name, category, skillCount, rules, tuiDim.Render(description))
 		}
 		b.WriteString("\n")
 	}
@@ -249,6 +251,17 @@ func (m GroupModel) listView() string {
 	b.WriteString(tuiDim.Render("Space toggle · Enter apply · / search · q cancel") + "\n")
 	b.WriteString(tuiDim.Render("PgUp/PgDn · Home/End") + "\n")
 	return b.String()
+}
+
+func padDisplay(value string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	value = lipgloss.NewStyle().MaxWidth(width).Render(value)
+	if pad := width - lipgloss.Width(value); pad > 0 {
+		value += strings.Repeat(" ", pad)
+	}
+	return value
 }
 
 func (m GroupModel) confirmView() string {
@@ -315,7 +328,7 @@ func (m GroupModel) visibleGroups() []GroupOption {
 	}
 	var visible []GroupOption
 	for _, g := range m.Groups {
-		haystack := strings.ToLower(strings.Join([]string{g.ID, g.Name, g.Title, g.Description}, " "))
+		haystack := strings.ToLower(strings.Join([]string{g.ID, g.Name, g.Category, g.Title, g.Description}, " "))
 		if strings.Contains(haystack, query) {
 			visible = append(visible, g)
 		}

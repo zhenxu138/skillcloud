@@ -123,6 +123,7 @@ func manageGroupFlow(targetName, scope, mode string) (string, error) {
 		options = append(options, tui.GroupOption{
 			ID:          g.ID,
 			Name:        g.Name,
+			Category:    g.Category,
 			Title:       g.Title,
 			Description: description,
 			SkillCount:  len(g.Members),

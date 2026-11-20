@@ -209,6 +209,7 @@ groups/devops/
 
 ```yaml
 name: devops
+category: 自定义组
 title: DevOps
 description: Server inspection, network diagnosis, and remote debugging.
 entry: ops/collect-env-info
@@ -221,6 +222,7 @@ skills:
 ```
 
 - `skills` accepts exact skill IDs or unique skill names. `as` overrides the projected directory name.
+- `category` groups the entry in `group list`; it defaults to SOP, 个人学习, or 自定义组 from the manifest path.
 - If `skills` is omitted and `GROUP.yaml` is inside `skills/`, every skill under that directory is included.
 - `title` and `description` label the group; `description` is the short workflow/strength summary shown by `group list`.
 - `agents` points to a Markdown file. If omitted, skillcloud checks `AGENTS.md` and then `.codex/agent.md` in the group directory. The content is written into the project `AGENTS.md` inside a managed block, and removed when the group is removed.

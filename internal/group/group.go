@@ -51,6 +51,7 @@ func (m *Member) UnmarshalYAML(value *yaml.Node) error {
 // Manifest is the GROUP.yaml schema.
 type Manifest struct {
 	Name        string   `yaml:"name"`
+	Category    string   `yaml:"category"`
 	Title       string   `yaml:"title"`
 	Description string   `yaml:"description"`
 	Entry       string   `yaml:"entry"`
@@ -68,6 +69,7 @@ type MemberRef struct {
 type Group struct {
 	ID          string
 	Name        string
+	Category    string
 	Title       string
 	Description string
 	Entry       string
@@ -162,6 +164,19 @@ func loadGroup(repoDir string, inline bool, manifestPath string, skills []skill.
 	if name == "" {
 		name = filepath.Base(dir)
 	}
+	category := strings.TrimSpace(manifest.Category)
+	if category == "" {
+		switch {
+		case strings.HasPrefix(relRepo, "skills/sop"):
+			category = "SOP"
+		case strings.HasPrefix(relRepo, "skills/myself"):
+			category = "个人学习"
+		case strings.HasPrefix(relRepo, "groups/"):
+			category = "自定义组"
+		default:
+			category = "其他"
+		}
+	}
 	members, err := resolveMembers(manifest, dir, inline, relSkills, skills)
 	if err != nil {
 		return Group{}, fmt.Errorf("%s: %w", manifestPath, err)
@@ -187,6 +202,7 @@ func loadGroup(repoDir string, inline bool, manifestPath string, skills []skill.
 	return Group{
 		ID:          relRepo,
 		Name:        name,
+		Category:    category,
 		Title:       strings.TrimSpace(manifest.Title),
 		Description: strings.TrimSpace(manifest.Description),
 		Entry:       strings.TrimSpace(manifest.Entry),
