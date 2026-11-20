@@ -299,6 +299,9 @@ func readOptionalFile(path string) (string, fs.FileMode, error) {
 }
 
 func writeAtomic(path string, data []byte, mode fs.FileMode) error {
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		path = resolved
+	}
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err

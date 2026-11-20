@@ -253,6 +253,8 @@ To inspect a group before loading it, use `skillcloud group show <group>`. To un
 
 Group rules are scoped. The root `AGENTS.md` only lists which groups are enabled and which rule file to read before using that group's skills. This lets a work SOP and a personal learning group coexist without applying every rule to every task; when a task uses multiple groups, read each group's rule file and reconcile explicitly.
 
+If the project already has an `AGENTS.md`, its content is preserved; skillcloud only appends or replaces its own `<!-- skillcloud:groups:... -->` index block. If `AGENTS.md` is a symlink, skillcloud writes through to the target instead of replacing the link.
+
 ## Skill Format
 
 Each skill is a folder containing `SKILL.md`.

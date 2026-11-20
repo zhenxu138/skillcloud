@@ -176,3 +176,29 @@ func TestRemoveLegacyGroupBlocksKeepsIndex(t *testing.T) {
 		t.Fatalf("index or user content removed:\n%s", text)
 	}
 }
+
+func TestGroupIndexPreservesSymlink(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "AGENTS.real.md")
+	link := filepath.Join(dir, "AGENTS.md")
+	if err := os.WriteFile(target, []byte("User note.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlinks not supported: %v", err)
+	}
+	if err := UpsertGroupIndex(link, "## Skill groups\n\n- work"); err != nil {
+		t.Fatalf("UpsertGroupIndex() error = %v", err)
+	}
+	info, err := os.Lstat(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Fatal("AGENTS.md symlink was replaced")
+	}
+	data, _ := os.ReadFile(target)
+	if !strings.Contains(string(data), GroupIndexBegin) || !strings.Contains(string(data), "User note.") {
+		t.Fatalf("target not updated:\n%s", string(data))
+	}
+}

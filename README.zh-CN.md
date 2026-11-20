@@ -255,6 +255,8 @@ skillcloud group use matt-pocock --prefix matt
 
 组规则是分作用域的。项目根 `AGENTS.md` 只列出启用了哪些组、使用该组技能前该读哪个规则文件；不会把所有规则平铺到每个任务。工作 SOP 和个人学习组可以同时启用，任务跨组时再显式读取并协调各自规则。
 
+如果项目已经有 `AGENTS.md`，原有内容会保留；skillcloud 只追加或替换自己的 `<!-- skillcloud:groups:... -->` 索引块。如果 `AGENTS.md` 是软链接，会写入软链目标，不会把链接本身替换成普通文件。
+
 ## Skill 格式
 
 每个 skill 都是一个包含 `SKILL.md` 的目录。
