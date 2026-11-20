@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/skillcloud/skillcloud/internal/project"
 	"github.com/spf13/cobra"
@@ -46,7 +47,7 @@ func newCurrentCommand() *cobra.Command {
 				target := cfg.Targets[targetName]
 				fmt.Fprintf(cmd.OutOrStdout(), "target: %s\nmode: %s\nskills: %d\n", targetName, target.Mode, len(target.Skills))
 				for _, ref := range target.Skills {
-					groupLabel := ref.Group
+					groupLabel := strings.Join(ref.GroupIDs(), ",")
 					if groupLabel == "" {
 						groupLabel = "-"
 					}

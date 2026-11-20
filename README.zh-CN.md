@@ -240,6 +240,15 @@ skillcloud group remove devops
 `skillcloud apply` 会重新应用已配置的 skill，并刷新每个组的 `AGENTS.md` 托管区块。
 用 `skillcloud current` 查看当前项目实际启用的 skill 和组。
 
+两个组有同名技能时，给第二个组加前缀：
+
+```bash
+skillcloud group use work
+skillcloud group use matt-pocock --prefix matt
+```
+
+第二个组会投影成 `matt-tdd`、`matt-code-review` 等。被两个组共用的 skill 会记录多个组归属，只有最后一个拥有它的组被移除时才会删除投影。
+
 加载前可以用 `skillcloud group show <组>` 查看成员。要取消整个组，使用 `skillcloud group remove <组>`：它会删除该组的投影、配置记录和 `AGENTS.md` 托管区块。只取消单个 skill 用 `skillcloud unuse <别名或ID>`；如果该 skill 属于某个组，优先用 `group remove`，这样组记录和规则也会一起清理。
 
 ## Skill 格式
@@ -298,8 +307,8 @@ targets:
 
 - `id` 是 skills 仓库里的分类路径。
 - `as` 是投影到 agent 目录后的平铺目录名。
-- `group` 标记由 `skillcloud group use` 添加的 skill。
-- `groups` 记录当前启用的组，以及需要维护的 `AGENTS.md` 规则。
+- skill 上的 `group` / `groups` 记录组归属；多个组共用一个 skill 时使用列表形式。
+- target 上的 `groups` 记录当前启用的组，以及需要维护的 `AGENTS.md` 规则。
 
 ## 命令
 

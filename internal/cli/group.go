@@ -107,6 +107,7 @@ func newGroupUseCommand() *cobra.Command {
 	var scope string
 	var mode string
 	var noAgents bool
+	var aliasPrefix string
 
 	cmd := &cobra.Command{
 		Use:   "use <group>",
@@ -132,7 +133,19 @@ func newGroupUseCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			result, err := applyGroupUse(root, g, targetName, mode, noAgents)
+			projectConfig, err := project.Load(root)
+			if err != nil {
+				return err
+			}
+			prefixNorm := normalizeAliasPrefix(aliasPrefix)
+			if prefixNorm != "" {
+				for _, ref := range projectConfig.Targets[targetName].Skills {
+					if ref.HasGroup(g.ID) && !strings.HasPrefix(ref.As, prefixNorm) {
+						return fmt.Errorf("group %s is already enabled without prefix %q; run `skillcloud group remove %s` first", g.Name, strings.TrimSuffix(prefixNorm, "-"), g.Name)
+					}
+				}
+			}
+			result, err := applyGroupUse(root, g, targetName, mode, noAgents, aliasPrefix)
 			if err != nil {
 				return err
 			}
@@ -147,6 +160,7 @@ func newGroupUseCommand() *cobra.Command {
 	cmd.Flags().StringVar(&scope, "scope", "project", "scope: project")
 	cmd.Flags().StringVar(&mode, "mode", "link", "mode: link or copy")
 	cmd.Flags().BoolVar(&noAgents, "no-agents", false, "do not write the group's AGENTS.md rules")
+	cmd.Flags().StringVar(&aliasPrefix, "prefix", "", "prefix projected skill aliases when groups overlap")
 	return cmd
 }
 

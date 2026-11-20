@@ -103,8 +103,8 @@ skills:
 		t.Fatalf("skills = %#v", target.Skills)
 	}
 	for _, ref := range target.Skills {
-		if ref.Group != "groups/devops" {
-			t.Fatalf("skill %q group = %q", ref.ID, ref.Group)
+		if !ref.HasGroup("groups/devops") {
+			t.Fatalf("skill %q groups = %#v", ref.ID, ref.GroupIDs())
 		}
 	}
 	if len(target.Groups) != 1 || target.Groups[0].ID != "groups/devops" || target.Groups[0].Name != "devops" {
@@ -200,7 +200,7 @@ skills:
 		t.Fatal(err)
 	}
 	skills := projectConfig.Targets["codex"].Skills
-	if len(skills) != 1 || skills[0].ID != "ops/manual" || skills[0].Group != "" {
+	if len(skills) != 1 || skills[0].ID != "ops/manual" || len(skills[0].GroupIDs()) != 0 {
 		t.Fatalf("manual skill not preserved: %#v", skills)
 	}
 }
@@ -278,6 +278,91 @@ skills:
 	}
 	if _, err := os.Stat(filepath.Join(projectRoot, "AGENTS.md")); !os.IsNotExist(err) {
 		t.Fatalf("apply should keep rules suppressed, err = %v", err)
+	}
+}
+
+func TestGroupUsePrefixResolvesAliasConflict(t *testing.T) {
+	repo, projectRoot := setupGroupProject(t)
+	writeTestSkill(t, repo, filepath.Join("skills", "a", "tdd"), "tdd", "A TDD.")
+	writeTestSkill(t, repo, filepath.Join("skills", "b", "tdd"), "tdd", "B TDD.")
+	writeGroupFile(t, repo, "groups/a/GROUP.yaml", "name: a\nskills:\n  - id: a/tdd\n")
+	writeGroupFile(t, repo, "groups/b/GROUP.yaml", "name: b\nskills:\n  - id: b/tdd\n")
+
+	if _, err := runCLI(t, "group", "use", "a"); err != nil {
+		t.Fatal(err)
+	}
+	_, err := runCLI(t, "group", "use", "b")
+	if err == nil || !strings.Contains(err.Error(), "--prefix") {
+		t.Fatalf("expected prefix suggestion, got %v", err)
+	}
+	if _, err := runCLI(t, "group", "use", "b", "--prefix", "b"); err != nil {
+		t.Fatalf("prefixed group use error = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(projectRoot, ".agents", "skills", "b-tdd", "SKILL.md")); err != nil {
+		t.Fatalf("expected prefixed projection: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(projectRoot, ".agents", "skills", "tdd", "SKILL.md")); err != nil {
+		t.Fatalf("expected original projection: %v", err)
+	}
+	cfg, err := project.Load(projectRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Targets["codex"].Skills) != 2 || len(cfg.Targets["codex"].Groups) != 2 {
+		t.Fatalf("config = %#v", cfg.Targets["codex"])
+	}
+}
+
+func TestGroupRemoveKeepsSkillSharedByAnotherGroup(t *testing.T) {
+	repo, projectRoot := setupGroupProject(t)
+	writeTestSkill(t, repo, filepath.Join("skills", "shared", "shared"), "shared", "Shared skill.")
+	writeTestSkill(t, repo, filepath.Join("skills", "a", "a-only"), "a-only", "A only.")
+	writeTestSkill(t, repo, filepath.Join("skills", "b", "b-only"), "b-only", "B only.")
+	writeGroupFile(t, repo, "groups/a/GROUP.yaml", "name: a\nskills:\n  - id: shared/shared\n  - id: a/a-only\n")
+	writeGroupFile(t, repo, "groups/b/GROUP.yaml", "name: b\nskills:\n  - id: shared/shared\n  - id: b/b-only\n")
+	for _, name := range []string{"a", "b"} {
+		if _, err := runCLI(t, "group", "use", name); err != nil {
+			t.Fatalf("group use %s: %v", name, err)
+		}
+	}
+	cfg, err := project.Load(projectRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var shared project.SkillRef
+	for _, ref := range cfg.Targets["codex"].Skills {
+		if ref.ID == "shared/shared" {
+			shared = ref
+		}
+	}
+	if len(shared.GroupIDs()) != 2 {
+		t.Fatalf("shared groups = %#v", shared.GroupIDs())
+	}
+
+	if _, err := runCLI(t, "group", "remove", "a"); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _ = project.Load(projectRoot)
+	ids := map[string]bool{}
+	for _, ref := range cfg.Targets["codex"].Skills {
+		ids[ref.ID] = true
+	}
+	if !ids["shared/shared"] || ids["a/a-only"] || !ids["b/b-only"] {
+		t.Fatalf("after remove a: %#v", ids)
+	}
+	if _, err := os.Lstat(filepath.Join(projectRoot, ".agents", "skills", "shared")); err != nil {
+		t.Fatalf("shared projection should remain: %v", err)
+	}
+
+	if _, err := runCLI(t, "group", "remove", "b"); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _ = project.Load(projectRoot)
+	if len(cfg.Targets["codex"].Skills) != 0 {
+		t.Fatalf("remaining skills = %#v", cfg.Targets["codex"].Skills)
+	}
+	if _, err := os.Lstat(filepath.Join(projectRoot, ".agents", "skills", "shared")); !os.IsNotExist(err) {
+		t.Fatalf("shared projection should be removed, err = %v", err)
 	}
 }
 

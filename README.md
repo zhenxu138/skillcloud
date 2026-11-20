@@ -238,6 +238,15 @@ skillcloud group remove devops
 `skillcloud apply` re-applies the configured skills and refreshes every group's managed `AGENTS.md` block.
 Use `skillcloud current` to see the exact skills and groups enabled in the current project.
 
+If two groups share skill names, prefix the second group:
+
+```bash
+skillcloud group use work
+skillcloud group use matt-pocock --prefix matt
+```
+
+This projects the second group as `matt-tdd`, `matt-code-review`, and so on. A skill shared by both groups is recorded with both owners and is not removed until the last owning group is removed.
+
 To inspect a group before loading it, use `skillcloud group show <group>`. To unload a whole group, use `skillcloud group remove <group>`; this removes its projections, its config record, and its managed `AGENTS.md` block. To remove one skill, use `skillcloud unuse <alias-or-id>`; for a group-owned skill, prefer `group remove` so the group record and rules are cleaned up too.
 
 ## Skill Format
@@ -296,8 +305,8 @@ targets:
 
 - `id` is the categorized path in your skills repository.
 - `as` is the flat directory name created for the agent.
-- `group` marks a skill added by `skillcloud group use`.
-- `groups` records the enabled groups whose `AGENTS.md` rules are managed.
+- `group` / `groups` on a skill record group ownership; the list form is used when multiple groups share a skill.
+- `groups` on a target records the enabled groups whose `AGENTS.md` rules are managed.
 
 ## Commands
 

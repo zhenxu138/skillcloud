@@ -44,3 +44,20 @@ func TestConfigPath(t *testing.T) {
 	}
 }
 
+func TestSkillRefGroupOwnershipMigration(t *testing.T) {
+	legacy := SkillRef{ID: "sop/work/shared", As: "shared", Group: "skills/sop/work"}
+	if !legacy.HasGroup("skills/sop/work") {
+		t.Fatal("legacy group field should be readable")
+	}
+	legacy.AddGroup("skills/sop/matt-pocock")
+	if len(legacy.GroupIDs()) != 2 || !legacy.HasGroup("skills/sop/matt-pocock") {
+		t.Fatalf("groups = %#v", legacy.GroupIDs())
+	}
+	legacy.RemoveGroup("skills/sop/work")
+	if len(legacy.GroupIDs()) != 1 || legacy.GroupIDs()[0] != "skills/sop/matt-pocock" {
+		t.Fatalf("groups = %#v", legacy.GroupIDs())
+	}
+	if legacy.Group != "" {
+		t.Fatalf("legacy group field should be cleared, got %q", legacy.Group)
+	}
+}

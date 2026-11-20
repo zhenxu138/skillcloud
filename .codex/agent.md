@@ -35,7 +35,7 @@ For changes to skill discovery, groups, projections, or config, add or update a 
 - Never overwrite or delete an unmanaged skill destination. Replacement must go through `install.CheckReplace`; identical unmanaged content may be adopted, different content must be refused.
 - Projections are recorded in sidecar manifests when linked and inside the directory when copied. Keep removal tied to a matching manifest.
 - Group rules live in a managed block delimited by `<!-- skillcloud:group:<id>:begin -->` and `...:end -->`. Replace or remove only that block and preserve all user content around it.
-- `group use` is project scope only. A skill currently belongs to at most one group; do not silently retag an existing group-owned skill.
+- `group use` is project scope only. Groups may overlap; `--prefix` resolves alias collisions. A shared skill keeps every owner in `SkillRef.Groups` and must not be removed until the last owning group is removed. Keep the legacy single `group` field readable.
 - Keep `.skillcloud.yaml` backward compatible. New optional fields use `omitempty`; existing configs must still load and apply.
 - `apply` must refresh both projections and group `AGENTS.md` blocks.
 - Keep `README.md` and `README.zh-CN.md` in sync when commands, config, or behavior change.

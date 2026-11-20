@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/skillcloud/skillcloud/internal/agents"
 	"github.com/skillcloud/skillcloud/internal/group"
@@ -17,9 +18,13 @@ type groupUseResult struct {
 	AgentsUpdated bool
 }
 
-func applyGroupUse(root string, g group.Group, targetName string, mode string, noAgents bool) (groupUseResult, error) {
+func applyGroupUse(root string, g group.Group, targetName string, mode string, noAgents bool, prefix string) (groupUseResult, error) {
 	if mode != "link" && mode != "copy" {
 		return groupUseResult{}, fmt.Errorf("unknown mode %q", mode)
+	}
+	prefix = normalizeAliasPrefix(prefix)
+	if strings.ContainsAny(prefix, "/\\") || strings.ContainsAny(prefix, " \t\n") {
+		return groupUseResult{}, fmt.Errorf("prefix %q cannot contain path separators or whitespace", prefix)
 	}
 	if len(g.Members) == 0 && (g.AgentsPath == "" || noAgents) {
 		return groupUseResult{}, fmt.Errorf("group %q has no skills and no AGENTS.md rules", g.Name)
@@ -39,20 +44,42 @@ func applyGroupUse(root string, g group.Group, targetName string, mode string, n
 
 	existing := map[string]bool{}
 	existingAlias := map[string]string{}
+	usedAlias := map[string]string{}
 	for _, ref := range projectConfig.Targets[targetName].Skills {
 		existing[ref.ID] = true
 		existingAlias[ref.ID] = ref.As
+		if ref.As != "" {
+			usedAlias[ref.As] = ref.ID
+		}
 	}
 	selected := make([]skill.Skill, 0, len(g.Members))
 	selectedIDs := map[string]bool{}
 	for _, member := range g.Members {
 		s := member.Skill
-		s.Name = member.As
-		if alias := existingAlias[s.ID]; alias != "" {
+		alias := member.As
+		if prefix != "" {
+			alias = prefix + member.As
+		}
+		if currentAlias := existingAlias[s.ID]; currentAlias != "" {
+			s.Name = currentAlias
+		} else {
 			s.Name = alias
 		}
 		selected = append(selected, s)
 		selectedIDs[s.ID] = true
+	}
+	var conflicts []string
+	for _, s := range selected {
+		if existingID, ok := usedAlias[s.Name]; ok && existingID != s.ID {
+			conflicts = append(conflicts, fmt.Sprintf("%s is already used by %s", s.Name, existingID))
+		}
+	}
+	if len(conflicts) > 0 {
+		suggestion := ""
+		if prefix == "" {
+			suggestion = fmt.Sprintf("; rerun with --prefix %s to load both groups", g.Name)
+		}
+		return groupUseResult{}, fmt.Errorf("alias conflict(s): %s%s", strings.Join(conflicts, "; "), suggestion)
 	}
 
 	plan, err := install.PlanEnable(selected, targetName, "project", mode, destRoot, projectConfig)
@@ -70,10 +97,16 @@ func applyGroupUse(root string, g group.Group, targetName string, mode string, n
 	targetConfig := updated.Targets[targetName]
 	for i := range targetConfig.Skills {
 		ref := &targetConfig.Skills[i]
-		if !selectedIDs[ref.ID] || existing[ref.ID] || ref.Group != "" {
+		if !selectedIDs[ref.ID] {
 			continue
 		}
-		ref.Group = g.ID
+		if existing[ref.ID] {
+			if len(ref.GroupIDs()) > 0 && !ref.HasGroup(g.ID) {
+				ref.AddGroup(g.ID)
+			}
+			continue
+		}
+		ref.AddGroup(g.ID)
 	}
 	foundGroup := false
 	for i := range targetConfig.Groups {
@@ -105,6 +138,17 @@ func applyGroupUse(root string, g group.Group, targetName string, mode string, n
 	return result, nil
 }
 
+func normalizeAliasPrefix(prefix string) string {
+	prefix = strings.TrimSpace(prefix)
+	if prefix == "" {
+		return ""
+	}
+	if !strings.HasSuffix(prefix, "-") && !strings.HasSuffix(prefix, "_") && !strings.HasSuffix(prefix, ".") {
+		prefix += "-"
+	}
+	return prefix
+}
+
 func applyGroupRemove(root string, g group.Group, targetName string, keepAgents bool) (int, error) {
 	projectConfig, err := project.Load(root)
 	if err != nil {
@@ -131,7 +175,12 @@ func applyGroupRemove(root string, g group.Group, targetName string, keepAgents 
 		}
 		keptSkills := make([]project.SkillRef, 0, len(targetConfig.Skills))
 		for _, ref := range targetConfig.Skills {
-			if ref.Group != g.ID {
+			if !ref.HasGroup(g.ID) {
+				keptSkills = append(keptSkills, ref)
+				continue
+			}
+			ref.RemoveGroup(g.ID)
+			if len(ref.GroupIDs()) > 0 {
 				keptSkills = append(keptSkills, ref)
 				continue
 			}

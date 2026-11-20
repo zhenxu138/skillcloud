@@ -167,7 +167,7 @@ func manageGroupFlow(targetName, scope, mode string) (string, error) {
 		if !ok {
 			return "", fmt.Errorf("group %q disappeared from repository", id)
 		}
-		if _, err := applyGroupUse(root, g, targetName, mode, false); err != nil {
+		if _, err := applyGroupUse(root, g, targetName, mode, false, ""); err != nil {
 			return "", err
 		}
 	}
