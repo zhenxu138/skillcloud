@@ -116,10 +116,17 @@ skills:
 		t.Fatal(err)
 	}
 	agents := string(agentsData)
-	for _, want := range []string{"Manual note.", "## Skill group: DevOps", "Run checks before reporting.", "skillcloud:group:groups/devops:begin"} {
+	for _, want := range []string{"Manual note.", "## Skill groups", "devops", ".skillcloud/groups/groups-devops.md"} {
 		if !strings.Contains(agents, want) {
 			t.Fatalf("missing %q in AGENTS.md:\n%s", want, agents)
 		}
+	}
+	ruleData, err := os.ReadFile(filepath.Join(projectRoot, ".skillcloud", "groups", "groups-devops.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(ruleData), "Run checks before reporting.") || !strings.Contains(string(ruleData), "Group: groups/devops") {
+		t.Fatalf("rule file content:\n%s", string(ruleData))
 	}
 
 	listOut, err := runCLI(t, "group", "list")
@@ -169,6 +176,9 @@ skills:
 	agents = string(agentsData)
 	if strings.Contains(agents, "groups/devops") || strings.Contains(agents, "Run checks before reporting.") {
 		t.Fatalf("group block remained:\n%s", agents)
+	}
+	if _, err := os.Stat(filepath.Join(projectRoot, ".skillcloud", "groups", "groups-devops.md")); !os.IsNotExist(err) {
+		t.Fatalf("rule file should be removed, err = %v", err)
 	}
 	if !strings.Contains(agents, "Manual note.") {
 		t.Fatalf("manual content lost:\n%s", agents)
@@ -221,12 +231,19 @@ func TestGroupUseRulesOnly(t *testing.T) {
 	if len(projectConfig.Targets["codex"].Groups) != 1 {
 		t.Fatalf("groups = %#v", projectConfig.Targets["codex"].Groups)
 	}
-	data, err := os.ReadFile(filepath.Join(projectRoot, "AGENTS.md"))
+	data, err := os.ReadFile(filepath.Join(projectRoot, ".skillcloud", "groups", "groups-rules.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(data), "Always run tests.") {
-		t.Fatalf("rules missing:\n%s", string(data))
+		t.Fatalf("rule file missing content:\n%s", string(data))
+	}
+	agentsData, err := os.ReadFile(filepath.Join(projectRoot, "AGENTS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(agentsData), "rules") || !strings.Contains(string(agentsData), ".skillcloud/groups/groups-rules.md") {
+		t.Fatalf("group index missing:\n%s", string(agentsData))
 	}
 }
 
@@ -313,6 +330,40 @@ func TestGroupUsePrefixResolvesAliasConflict(t *testing.T) {
 	}
 }
 
+func TestGroupUseScopesMultipleGroupRules(t *testing.T) {
+	repo, projectRoot := setupGroupProject(t)
+	writeTestSkill(t, repo, filepath.Join("skills", "a", "foo"), "foo", "Foo.")
+	writeTestSkill(t, repo, filepath.Join("skills", "b", "bar"), "bar", "Bar.")
+	writeGroupFile(t, repo, "groups/a/GROUP.yaml", "name: a\ncategory: SOP\nagents: AGENTS.md\nskills:\n  - id: a/foo\n")
+	writeGroupFile(t, repo, "groups/a/AGENTS.md", "A rule.\n")
+	writeGroupFile(t, repo, "groups/b/GROUP.yaml", "name: b\ncategory: 个人学习\nagents: AGENTS.md\nskills:\n  - id: b/bar\n")
+	writeGroupFile(t, repo, "groups/b/AGENTS.md", "B rule.\n")
+	for _, name := range []string{"a", "b"} {
+		if _, err := runCLI(t, "group", "use", name); err != nil {
+			t.Fatalf("group use %s: %v", name, err)
+		}
+	}
+	agents, err := os.ReadFile(filepath.Join(projectRoot, "AGENTS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(agents)
+	for _, want := range []string{"## Skill groups", "SOP", "个人学习", ".skillcloud/groups/groups-a.md", ".skillcloud/groups/groups-b.md"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("missing %q in AGENTS.md:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "A rule.") || strings.Contains(text, "B rule.") {
+		t.Fatalf("rules should be scoped out of AGENTS.md:\n%s", text)
+	}
+	for rel, want := range map[string]string{"groups-a.md": "A rule.", "groups-b.md": "B rule."} {
+		data, err := os.ReadFile(filepath.Join(projectRoot, ".skillcloud", "groups", rel))
+		if err != nil || !strings.Contains(string(data), want) {
+			t.Fatalf("rule file %s missing %q: %v\n%s", rel, want, err, string(data))
+		}
+	}
+}
+
 func TestGroupRemoveKeepsSkillSharedByAnotherGroup(t *testing.T) {
 	repo, projectRoot := setupGroupProject(t)
 	writeTestSkill(t, repo, filepath.Join("skills", "shared", "shared"), "shared", "Shared skill.")
@@ -395,8 +446,11 @@ skills:
 		t.Fatalf("claude config = %#v", cfg.Targets["claude"])
 	}
 	agents, _ := os.ReadFile(filepath.Join(projectRoot, "AGENTS.md"))
-	if !strings.Contains(string(agents), "Demo rule.") {
+	if !strings.Contains(string(agents), "demo") || !strings.Contains(string(agents), ".skillcloud/groups/groups-demo.md") {
 		t.Fatalf("rules should remain while another target uses the group:\n%s", string(agents))
+	}
+	if _, err := os.Stat(filepath.Join(projectRoot, ".skillcloud", "groups", "groups-demo.md")); err != nil {
+		t.Fatalf("rule file should remain: %v", err)
 	}
 
 	if _, err := runCLI(t, "group", "remove", "demo", "--target", "claude"); err != nil {
@@ -410,12 +464,15 @@ skills:
 		t.Fatalf("claude config = %#v", cfg.Targets["claude"])
 	}
 	agents, _ = os.ReadFile(filepath.Join(projectRoot, "AGENTS.md"))
-	if strings.Contains(string(agents), "Demo rule.") {
+	if strings.Contains(string(agents), "demo") || strings.Contains(string(agents), ".skillcloud/groups/groups-demo.md") {
 		t.Fatalf("rules should be removed after the last target:\n%s", string(agents))
+	}
+	if _, err := os.Stat(filepath.Join(projectRoot, ".skillcloud", "groups", "groups-demo.md")); !os.IsNotExist(err) {
+		t.Fatalf("rule file should be removed, err = %v", err)
 	}
 }
 
-func TestApplyRefreshesGroupAgents(t *testing.T) {
+func TestApplyRefreshesGroupRules(t *testing.T) {
 	repo, projectRoot := setupGroupProject(t)
 	writeTestSkill(t, repo, filepath.Join("skills", "ops", "foo"), "foo", "Foo skill.")
 	writeGroupFile(t, repo, "groups/demo/GROUP.yaml", `name: demo
@@ -432,12 +489,12 @@ skills:
 	if _, err := runCLI(t, "apply"); err != nil {
 		t.Fatalf("apply error = %v", err)
 	}
-	data, err := os.ReadFile(filepath.Join(projectRoot, "AGENTS.md"))
+	data, err := os.ReadFile(filepath.Join(projectRoot, ".skillcloud", "groups", "groups-demo.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(data), "New rule.") || strings.Contains(string(data), "Old rule.") {
-		t.Fatalf("AGENTS.md not refreshed:\n%s", string(data))
+		t.Fatalf("rule file not refreshed:\n%s", string(data))
 	}
 	if _, err := os.Stat(filepath.Join(projectRoot, ".agents", "skills", "foo", "SKILL.md")); err != nil {
 		t.Fatalf("skill not re-applied: %v", err)

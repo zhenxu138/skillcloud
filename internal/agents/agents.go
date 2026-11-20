@@ -10,6 +10,11 @@ import (
 
 const markerPrefix = "<!-- skillcloud:group:"
 
+const (
+	GroupIndexBegin = "<!-- skillcloud:groups:begin -->"
+	GroupIndexEnd   = "<!-- skillcloud:groups:end -->"
+)
+
 // BeginMarker returns the start marker for a managed group block.
 func BeginMarker(groupID string) string {
 	return markerPrefix + groupID + ":begin -->"
@@ -133,6 +138,106 @@ func List(path string) ([]string, error) {
 		}
 	}
 	return ids, nil
+}
+
+// UpsertGroupIndex writes the compact group index block in the project AGENTS.md.
+func UpsertGroupIndex(path string, body string) error {
+	block := GroupIndexBegin + "\n" + strings.TrimSpace(body) + "\n" + GroupIndexEnd
+	original, mode, err := readOptionalFile(path)
+	if err != nil {
+		return err
+	}
+	crlf := strings.Contains(original, "\r\n")
+	normalized := strings.ReplaceAll(original, "\r\n", "\n")
+	lines := strings.Split(normalized, "\n")
+
+	begin, end, err := findMarkedBlock(lines, GroupIndexBegin, GroupIndexEnd)
+	if err != nil {
+		return err
+	}
+	blockLines := strings.Split(block, "\n")
+	if begin >= 0 {
+		replaced := make([]string, 0, len(lines)-(end-begin+1)+len(blockLines))
+		replaced = append(replaced, lines[:begin]...)
+		replaced = append(replaced, blockLines...)
+		replaced = append(replaced, lines[end+1:]...)
+		lines = replaced
+	} else {
+		for len(lines) > 0 && strings.TrimSpace(lines[len(lines)-1]) == "" {
+			lines = lines[:len(lines)-1]
+		}
+		if len(lines) > 0 {
+			lines = append(lines, "")
+		}
+		lines = append(lines, blockLines...)
+		lines = append(lines, "")
+	}
+
+	out := strings.Join(lines, "\n")
+	if crlf {
+		out = strings.ReplaceAll(out, "\n", "\r\n")
+	}
+	return writeAtomic(path, []byte(out), mode)
+}
+
+// RemoveGroupIndex removes the compact group index block.
+func RemoveGroupIndex(path string) error {
+	original, mode, err := readOptionalFile(path)
+	if err != nil || original == "" {
+		return err
+	}
+	crlf := strings.Contains(original, "\r\n")
+	normalized := strings.ReplaceAll(original, "\r\n", "\n")
+	lines := strings.Split(normalized, "\n")
+	begin, end, err := findMarkedBlock(lines, GroupIndexBegin, GroupIndexEnd)
+	if err != nil || begin < 0 {
+		return err
+	}
+	lines = append(lines[:begin], lines[end+1:]...)
+	for begin > 0 && begin < len(lines) && strings.TrimSpace(lines[begin]) == "" && strings.TrimSpace(lines[begin-1]) == "" {
+		lines = append(lines[:begin], lines[begin+1:]...)
+	}
+	out := strings.Join(lines, "\n")
+	if crlf {
+		out = strings.ReplaceAll(out, "\n", "\r\n")
+	}
+	return writeAtomic(path, []byte(out), mode)
+}
+
+// RemoveLegacyGroupBlocks removes old per-group blocks written directly into AGENTS.md.
+func RemoveLegacyGroupBlocks(path string) error {
+	ids, err := List(path)
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if err := Remove(path, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func findMarkedBlock(lines []string, beginMarker string, endMarker string) (int, int, error) {
+	begin := -1
+	for i, line := range lines {
+		if strings.TrimSpace(line) != beginMarker {
+			continue
+		}
+		if begin >= 0 {
+			return -1, -1, fmt.Errorf("multiple managed blocks for %s", beginMarker)
+		}
+		begin = i
+	}
+	if begin < 0 {
+		return -1, -1, nil
+	}
+	for i := begin + 1; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) == endMarker {
+			return begin, i, nil
+		}
+	}
+	return -1, -1, fmt.Errorf("unterminated managed block for %s", beginMarker)
 }
 
 func findBlock(lines []string, groupID string) (int, int, error) {

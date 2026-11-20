@@ -87,7 +87,7 @@ my-project/
 | Import | Add existing local skill directories to your library with `skillcloud add`. |
 | Organization | Keep skills in nested categories instead of one flat folder. |
 | Selection | Enable explicit skills, many skills, or `category/*`. |
-| Groups | Enable a named set of skills and its managed `AGENTS.md` rules. |
+| Groups | Enable a named set of skills with scoped rule files. |
 | TUI | Browse and select skills interactively. |
 | Projection | Link or copy selected skills into agent-specific directories. |
 | Agents | Built-in target paths for Codex, Claude Code, and Hermes. |
@@ -151,7 +151,7 @@ The TUI opens a launcher menu. Move with Up/Down (or j/k), run an entry with Ent
 | Entry | What it does |
 | --- | --- |
 | Browse | Select skills for the current project interactively |
-| Groups | Load or remove whole skill groups and their `AGENTS.md` rules |
+| Groups | Load or remove whole skill groups and their scoped rules |
 | Enabled | Review and disable enabled skills for the current project |
 | Add | Import a local skill directory into the library |
 | Changes | Show library repo changes and project projection drift |
@@ -225,7 +225,7 @@ skills:
 - `category` groups the entry in `group list`; it defaults to SOP, 个人学习, or 自定义组 from the manifest path.
 - If `skills` is omitted and `GROUP.yaml` is inside `skills/`, every skill under that directory is included.
 - `title` and `description` label the group; `description` is the short workflow/strength summary shown by `group list`.
-- `agents` points to a Markdown file. If omitted, skillcloud checks `AGENTS.md` and then `.codex/agent.md` in the group directory. The content is written into the project `AGENTS.md` inside a managed block, and removed when the group is removed.
+- `agents` points to a Markdown file. If omitted, skillcloud checks `AGENTS.md` and then `.codex/agent.md` in the group directory. The content is written to `.skillcloud/groups/<group>.md`, and the project `AGENTS.md` gets a compact scoped index pointing to it.
 - Group enablement is project scope. `.skillcloud.yaml` records the group and tags the skills it added, so removing the group does not remove skills that were already enabled manually.
 - `--no-agents` records the group while suppressing its rules; later `apply` runs keep them suppressed.
 - Codex loads `AGENTS.md` at session start, so start a new session after `group use` to pick up new rules.
@@ -237,7 +237,7 @@ skillcloud group use devops --target codex --mode link
 skillcloud group remove devops
 ```
 
-`skillcloud apply` re-applies the configured skills and refreshes every group's managed `AGENTS.md` block.
+`skillcloud apply` re-applies the configured skills and refreshes every group's rule file plus the scoped index in project `AGENTS.md`.
 Use `skillcloud current` to see the exact skills and groups enabled in the current project.
 
 If two groups share skill names, prefix the second group:
@@ -249,7 +249,9 @@ skillcloud group use matt-pocock --prefix matt
 
 This projects the second group as `matt-tdd`, `matt-code-review`, and so on. A skill shared by both groups is recorded with both owners and is not removed until the last owning group is removed.
 
-To inspect a group before loading it, use `skillcloud group show <group>`. To unload a whole group, use `skillcloud group remove <group>`; this removes its projections, its config record, and its managed `AGENTS.md` block. To remove one skill, use `skillcloud unuse <alias-or-id>`; for a group-owned skill, prefer `group remove` so the group record and rules are cleaned up too.
+To inspect a group before loading it, use `skillcloud group show <group>`. To unload a whole group, use `skillcloud group remove <group>`; this removes its projections, config record, rule file, and index entry. To remove one skill, use `skillcloud unuse <alias-or-id>`; for a group-owned skill, prefer `group remove` so the group record and rules are cleaned up too.
+
+Group rules are scoped. The root `AGENTS.md` only lists which groups are enabled and which rule file to read before using that group's skills. This lets a work SOP and a personal learning group coexist without applying every rule to every task; when a task uses multiple groups, read each group's rule file and reconcile explicitly.
 
 ## Skill Format
 
@@ -308,7 +310,7 @@ targets:
 - `id` is the categorized path in your skills repository.
 - `as` is the flat directory name created for the agent.
 - `group` / `groups` on a skill record group ownership; the list form is used when multiple groups share a skill.
-- `groups` on a target records the enabled groups whose `AGENTS.md` rules are managed.
+- `groups` on a target records the enabled groups whose scoped rule files and index are managed.
 
 ## Commands
 

@@ -3,12 +3,10 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"text/tabwriter"
 
-	"github.com/skillcloud/skillcloud/internal/agents"
 	"github.com/skillcloud/skillcloud/internal/group"
 	"github.com/skillcloud/skillcloud/internal/project"
 	"github.com/skillcloud/skillcloud/internal/skill"
@@ -179,7 +177,7 @@ func newGroupUseCommand() *cobra.Command {
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "enabled %d skill(s) from group %s for %s\n", result.Skills, g.Name, targetName)
 			if result.AgentsUpdated {
-				fmt.Fprintln(cmd.OutOrStdout(), "updated AGENTS.md with group rules; start a new Codex session to load them")
+				fmt.Fprintln(cmd.OutOrStdout(), "updated group rule file and AGENTS.md index; start a new Codex session to load them")
 			}
 			return nil
 		},
@@ -194,7 +192,6 @@ func newGroupUseCommand() *cobra.Command {
 
 func newGroupRemoveCommand() *cobra.Command {
 	var targetName string
-	var keepAgents bool
 
 	cmd := &cobra.Command{
 		Use:   "remove <group>",
@@ -221,7 +218,7 @@ func newGroupRemoveCommand() *cobra.Command {
 					return err
 				}
 			}
-			removed, err := applyGroupRemove(root, g, targetName, keepAgents)
+			removed, err := applyGroupRemove(root, g, targetName)
 			if err != nil {
 				return err
 			}
@@ -230,7 +227,6 @@ func newGroupRemoveCommand() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&targetName, "target", "codex", "target agent: codex, claude, hermes")
-	cmd.Flags().BoolVar(&keepAgents, "keep-agents", false, "keep the group's AGENTS.md block")
 	return cmd
 }
 
@@ -270,47 +266,4 @@ func groupTitle(g group.Group) string {
 		return g.Title
 	}
 	return g.Name
-}
-
-func refreshGroupAgents(root string, cfg project.Config, groups []group.Group) error {
-	path := filepath.Join(root, "AGENTS.md")
-	configured := map[string]bool{}
-	for _, targetConfig := range cfg.Targets {
-		for _, groupRef := range targetConfig.Groups {
-			g, err := group.Find(groups, groupRef.ID)
-			if err != nil && groupRef.Name != "" {
-				g, err = group.Find(groups, groupRef.Name)
-			}
-			if err != nil {
-				return fmt.Errorf("configured group %q: %w", groupRef.ID, err)
-			}
-			configured[g.ID] = true
-			if g.AgentsPath == "" || groupRef.NoAgents {
-				if err := agents.Remove(path, g.ID); err != nil {
-					return err
-				}
-				continue
-			}
-			data, err := os.ReadFile(g.AgentsPath)
-			if err != nil {
-				return err
-			}
-			if err := agents.Upsert(path, g.ID, groupTitle(g), string(data)); err != nil {
-				return err
-			}
-		}
-	}
-	stale, err := agents.List(path)
-	if err != nil {
-		return err
-	}
-	for _, id := range stale {
-		if configured[id] {
-			continue
-		}
-		if err := agents.Remove(path, id); err != nil {
-			return err
-		}
-	}
-	return nil
 }

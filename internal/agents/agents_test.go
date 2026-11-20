@@ -121,3 +121,58 @@ func TestLineEndingsArePreserved(t *testing.T) {
 		t.Fatalf("expected CRLF output, got %q", string(data))
 	}
 }
+
+func TestGroupIndexUpsertAndRemove(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "AGENTS.md")
+	if err := os.WriteFile(path, []byte("User note.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := UpsertGroupIndex(path, "## Skill groups\n\n- work"); err != nil {
+		t.Fatalf("UpsertGroupIndex() error = %v", err)
+	}
+	data, _ := os.ReadFile(path)
+	text := string(data)
+	if !strings.Contains(text, GroupIndexBegin) || !strings.Contains(text, GroupIndexEnd) || !strings.Contains(text, "User note.") {
+		t.Fatalf("index not written:\n%s", text)
+	}
+	if err := UpsertGroupIndex(path, "## Skill groups\n\n- myself"); err != nil {
+		t.Fatal(err)
+	}
+	data, _ = os.ReadFile(path)
+	text = string(data)
+	if strings.Contains(text, "- work") || !strings.Contains(text, "- myself") || strings.Count(text, GroupIndexBegin) != 1 {
+		t.Fatalf("index not replaced:\n%s", text)
+	}
+	if err := RemoveGroupIndex(path); err != nil {
+		t.Fatalf("RemoveGroupIndex() error = %v", err)
+	}
+	data, _ = os.ReadFile(path)
+	text = string(data)
+	if strings.Contains(text, GroupIndexBegin) || !strings.Contains(text, "User note.") {
+		t.Fatalf("index not removed:\n%s", text)
+	}
+}
+
+func TestRemoveLegacyGroupBlocksKeepsIndex(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "AGENTS.md")
+	if err := os.WriteFile(path, []byte("User note.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := Upsert(path, "skills/sop/work", "Work", "Old work rule.\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := UpsertGroupIndex(path, "## Skill groups\n\n- work"); err != nil {
+		t.Fatal(err)
+	}
+	if err := RemoveLegacyGroupBlocks(path); err != nil {
+		t.Fatalf("RemoveLegacyGroupBlocks() error = %v", err)
+	}
+	data, _ := os.ReadFile(path)
+	text := string(data)
+	if strings.Contains(text, "Old work rule.") || strings.Contains(text, BeginMarker("skills/sop/work")) {
+		t.Fatalf("legacy block remained:\n%s", text)
+	}
+	if !strings.Contains(text, GroupIndexBegin) || !strings.Contains(text, "User note.") {
+		t.Fatalf("index or user content removed:\n%s", text)
+	}
+}

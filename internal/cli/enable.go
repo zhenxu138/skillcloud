@@ -304,7 +304,7 @@ func newApplyCommand() *cobra.Command {
 					return err
 				}
 			}
-			if err := refreshGroupAgents(root, projectConfig, groups); err != nil {
+			if err := refreshGroupRules(root, projectConfig, groups); err != nil {
 				return err
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), "applied project skills")

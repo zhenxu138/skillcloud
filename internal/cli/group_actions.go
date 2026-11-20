@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/skillcloud/skillcloud/internal/agents"
 	"github.com/skillcloud/skillcloud/internal/group"
 	"github.com/skillcloud/skillcloud/internal/install"
 	"github.com/skillcloud/skillcloud/internal/project"
@@ -123,19 +122,15 @@ func applyGroupUse(root string, g group.Group, targetName string, mode string, n
 	if err := project.Save(root, updated); err != nil {
 		return groupUseResult{}, err
 	}
-
-	result := groupUseResult{Skills: len(selected)}
-	if !noAgents && g.AgentsPath != "" {
-		data, err := os.ReadFile(g.AgentsPath)
-		if err != nil {
-			return groupUseResult{}, err
-		}
-		if err := agents.Upsert(filepath.Join(root, "AGENTS.md"), g.ID, groupTitle(g), string(data)); err != nil {
-			return groupUseResult{}, err
-		}
-		result.AgentsUpdated = true
+	groups, _, _, err := loadGroups()
+	if err != nil {
+		return groupUseResult{}, err
 	}
-	return result, nil
+	if err := refreshGroupRules(root, updated, groups); err != nil {
+		return groupUseResult{}, err
+	}
+
+	return groupUseResult{Skills: len(selected), AgentsUpdated: !noAgents && g.AgentsPath != ""}, nil
 }
 
 func normalizeAliasPrefix(prefix string) string {
@@ -149,7 +144,7 @@ func normalizeAliasPrefix(prefix string) string {
 	return prefix
 }
 
-func applyGroupRemove(root string, g group.Group, targetName string, keepAgents bool) (int, error) {
+func applyGroupRemove(root string, g group.Group, targetName string) (int, error) {
 	projectConfig, err := project.Load(root)
 	if err != nil {
 		return 0, err
@@ -214,18 +209,12 @@ func applyGroupRemove(root string, g group.Group, targetName string, keepAgents 
 	if err := project.Save(root, projectConfig); err != nil {
 		return removed, err
 	}
-	stillEnabled := false
-	for _, targetConfig := range projectConfig.Targets {
-		for _, groupRef := range targetConfig.Groups {
-			if groupRef.ID == g.ID {
-				stillEnabled = true
-			}
-		}
+	groups, _, _, err := loadGroups()
+	if err != nil {
+		return removed, err
 	}
-	if !keepAgents && !stillEnabled {
-		if err := agents.Remove(filepath.Join(root, "AGENTS.md"), g.ID); err != nil {
-			return removed, err
-		}
+	if err := refreshGroupRules(root, projectConfig, groups); err != nil {
+		return removed, err
 	}
 	return removed, nil
 }

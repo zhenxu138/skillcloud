@@ -87,7 +87,7 @@ my-project/
 | 导入 | 用 `skillcloud add` 将本地已有 skill 目录加入 library。 |
 | 整理 | 用多级分类目录管理 skill，而不是全部放进一个大平铺目录。 |
 | 选择 | 支持启用单个 skill、多个 skill，或 `category/*` 整个分类。 |
-| 技能组 | 一次启用一组 skill，并管理对应的 `AGENTS.md` 规则。 |
+| 技能组 | 一次启用一组 skill，并管理分作用域的规则文件。 |
 | TUI | 支持交互式浏览和选择 skill。 |
 | 投影 | 将选中的 skill 链接或复制到 agent 指定目录。 |
 | Agent | 内置 Codex、Claude Code、Hermes 的目标路径。 |
@@ -151,7 +151,7 @@ TUI 打开一个启动菜单。用上下方向键（或 j/k）移动，Enter 执
 | 菜单项 | 功能 |
 | --- | --- |
 | Browse | 交互式选择当前项目要启用的 skill |
-| Groups | 加载或移除整个技能组及其 `AGENTS.md` 规则 |
+| Groups | 加载或移除整个技能组及其作用域规则 |
 | Enabled | 查看并取消当前项目已启用的 skill |
 | Add | 将本地 skill 目录导入到 library |
 | Changes | 显示 library 仓库改动和项目投影漂移 |
@@ -227,7 +227,7 @@ skills:
 - `category` 决定 `group list` 中的分类；未填写时按清单路径推断为 SOP、个人学习或自定义组。
 - 如果省略 `skills` 且 `GROUP.yaml` 位于 `skills/` 下，组会自动包含该目录下的全部 skill。
 - `title` 和 `description` 用来标识组；`description` 会作为简短的工作流/擅长说明显示在 `group list` 中。
-- `agents` 指向一个 Markdown 文件。省略时，skillcloud 会依次检查组目录下的 `AGENTS.md` 和 `.codex/agent.md`。启用组时，它的内容会写入项目 `AGENTS.md` 的托管区块；移除组时只删除这个区块。
+- `agents` 指向一个 Markdown 文件。省略时，skillcloud 会依次检查组目录下的 `AGENTS.md` 和 `.codex/agent.md`。启用组时，内容写入 `.skillcloud/groups/<组>.md`，项目 `AGENTS.md` 只保留指向它的作用域索引。
 - 技能组只支持项目作用域。`.skillcloud.yaml` 会记录组，并给组新增的 skill 打上 `group` 标记；移除组不会删掉之前手动启用的同名 skill。
 - `--no-agents` 会记录组但不写入规则；后续 `apply` 也会保持抑制状态。
 - Codex 在会话启动时读取 `AGENTS.md`，所以 `group use` 后需要新会话才能加载新规则。
@@ -239,7 +239,7 @@ skillcloud group use devops --target codex --mode link
 skillcloud group remove devops
 ```
 
-`skillcloud apply` 会重新应用已配置的 skill，并刷新每个组的 `AGENTS.md` 托管区块。
+`skillcloud apply` 会重新应用已配置的 skill，并刷新每个组的规则文件以及项目 `AGENTS.md` 中的作用域索引。
 用 `skillcloud current` 查看当前项目实际启用的 skill 和组。
 
 两个组有同名技能时，给第二个组加前缀：
@@ -251,7 +251,9 @@ skillcloud group use matt-pocock --prefix matt
 
 第二个组会投影成 `matt-tdd`、`matt-code-review` 等。被两个组共用的 skill 会记录多个组归属，只有最后一个拥有它的组被移除时才会删除投影。
 
-加载前可以用 `skillcloud group show <组>` 查看成员。要取消整个组，使用 `skillcloud group remove <组>`：它会删除该组的投影、配置记录和 `AGENTS.md` 托管区块。只取消单个 skill 用 `skillcloud unuse <别名或ID>`；如果该 skill 属于某个组，优先用 `group remove`，这样组记录和规则也会一起清理。
+加载前可以用 `skillcloud group show <组>` 查看成员。要取消整个组，使用 `skillcloud group remove <组>`：它会删除该组的投影、配置记录、规则文件和索引项。只取消单个 skill 用 `skillcloud unuse <别名或ID>`；如果该 skill 属于某个组，优先用 `group remove`，这样组记录和规则也会一起清理。
+
+组规则是分作用域的。项目根 `AGENTS.md` 只列出启用了哪些组、使用该组技能前该读哪个规则文件；不会把所有规则平铺到每个任务。工作 SOP 和个人学习组可以同时启用，任务跨组时再显式读取并协调各自规则。
 
 ## Skill 格式
 
@@ -310,7 +312,7 @@ targets:
 - `id` 是 skills 仓库里的分类路径。
 - `as` 是投影到 agent 目录后的平铺目录名。
 - skill 上的 `group` / `groups` 记录组归属；多个组共用一个 skill 时使用列表形式。
-- target 上的 `groups` 记录当前启用的组，以及需要维护的 `AGENTS.md` 规则。
+- target 上的 `groups` 记录当前启用的组，以及需要维护的规则文件和索引。
 
 ## 命令
 
